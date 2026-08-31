@@ -10,10 +10,23 @@ the day's calendar in the bottom two thirds, both aimed at the same day.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm test           # date + recurrence unit tests
-npm run build      # typecheck, then production build into dist/
+npm run dev            # http://localhost:5173
+npm run dev -- --host  # also serve on the LAN, to open it on a phone
+npm test               # date + recurrence unit tests
+npm run build          # typecheck, then production build into dist/
 ```
+
+## Deploying
+
+Pushing to the development branch (or `main`) runs
+`.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to
+GitHub Pages. Enable it once under **Settings → Pages → Source: GitHub
+Actions**; the workflow then keeps the site in step with the branch.
+
+The build uses `base: './'`, so the same `dist/` works from a domain root, from
+a Pages project subpath like `/Best/`, or from any other static host. The web
+manifest's `start_url`, `scope` and icon path are relative for the same reason —
+absolute ones would resolve to the domain root and break the installed app.
 
 ## What's in the baseline
 
