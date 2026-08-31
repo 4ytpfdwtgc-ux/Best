@@ -1,0 +1,299 @@
+/* Mini month ------------------------------------------------------ */
+
+.mini { padding: 6px 4px 2px; }
+.mini__head { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 4px; }
+.mini__title { font-size: 12.5px; font-weight: 600; }
+.mini__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.mini__weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  padding-bottom: 2px;
+}
+.mini__day {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+}
+.mini__day:hover { background: var(--bg-hover); }
+.mini__day.is-muted { color: var(--text-tertiary); }
+.mini__day.is-today { color: var(--tint-red); font-weight: 700; }
+.mini__day.is-selected { background: var(--accent); color: var(--text-on-accent); font-weight: 600; }
+.mini__day.is-selected.is-today { color: var(--text-on-accent); }
+.mini__dot {
+  position: absolute;
+  bottom: 1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.cal-check {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border-radius: 4px;
+  border: 1.5px solid var(--tint, var(--tint-gray));
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.cal-check.is-on { background: var(--tint, var(--accent)); }
+.side-item__rename { background: none; padding: 0; }
+
+/* Month view ------------------------------------------------------ */
+
+.month { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.month__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+.month__weekdays span {
+  padding: 6px 8px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.month__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  min-height: 0;
+}
+.month__cell {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 3px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  cursor: default;
+  transition: background 0.1s var(--ease);
+}
+.month__cell:nth-child(7n) { border-right: 0; }
+.month__cell:hover { background: var(--bg-hover); }
+.month__cell.is-weekend { background: color-mix(in srgb, var(--bg-panel) 55%, transparent); }
+.month__cell.is-outside { opacity: 0.42; }
+.month__cell.is-selected { box-shadow: inset 0 0 0 2px var(--accent); }
+.month__date {
+  align-self: flex-end;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 4px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+}
+.month__cell.is-today .month__date { background: var(--tint-red); color: #fff; font-weight: 700; }
+.month__chips { display: flex; flex-direction: column; gap: 1px; min-height: 0; overflow: hidden; }
+.month__more { font-size: 10.5px; color: var(--text-tertiary); padding-left: 4px; }
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text);
+  min-width: 0;
+}
+.chip:hover { background: var(--bg-active); }
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tint, var(--tint-blue));
+}
+.chip__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip--allday {
+  background: var(--tint, var(--tint-blue));
+  color: #fff;
+  font-weight: 500;
+  padding: 1px 6px;
+}
+.chip--allday:hover { filter: brightness(1.08); background: var(--tint, var(--tint-blue)); }
+.chip--reminder .chip__dot { background: none; border: 1.5px solid var(--tint, var(--tint-gray)); }
+.chip--reminder { color: var(--text-secondary); }
+
+/* Time grid (day + week) ------------------------------------------ */
+
+.tg { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.tg__header {
+  display: grid;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.tg__dayhead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 0 7px;
+  border-left: 1px solid var(--line);
+}
+.tg__dayname { font-size: 10.5px; font-weight: 600; text-transform: uppercase; color: var(--text-tertiary); }
+.tg__daynum {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.tg__dayhead.is-today .tg__daynum { background: var(--tint-red); color: #fff; }
+.tg__dayhead.is-selected .tg__dayname { color: var(--accent); }
+
+.tg__allday {
+  display: grid;
+  border-bottom: 1px solid var(--line);
+  min-height: 26px;
+  flex: none;
+  max-height: 84px;
+  overflow-y: auto;
+}
+.tg__allday-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 4px 6px 0 0;
+  text-align: right;
+}
+.tg__allday-cell {
+  border-left: 1px solid var(--line);
+  padding: 2px 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tg__scroll { flex: 1; min-height: 0; }
+.tg__body { display: grid; position: relative; }
+.tg__hours { position: relative; }
+.tg__hour {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.tg__col { position: relative; border-left: 1px solid var(--line); }
+.tg__col.is-today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.tg__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+.tg__now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--tint-red);
+  z-index: 3;
+}
+.tg__now::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tint-red);
+}
+
+.ev {
+  position: absolute;
+  border-radius: 5px;
+  padding: 2px 5px;
+  overflow: hidden;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--tint, var(--tint-blue)) 20%, var(--bg-window));
+  border-left: 3px solid var(--tint, var(--tint-blue));
+  color: var(--text);
+  z-index: 2;
+  transition: filter 0.12s var(--ease);
+}
+.ev:hover { filter: brightness(1.06); z-index: 4; }
+.ev__title {
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ev__time {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Year view ------------------------------------------------------- */
+
+.year {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 18px;
+  padding: 18px;
+  align-content: start;
+}
+.year__title { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--tint-red); }
+.year__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.year__weekday { font-size: 9.5px; text-align: center; color: var(--text-tertiary); font-weight: 600; }
+.year__day {
+  aspect-ratio: 1;
+  font-size: 10.5px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.year__day:hover { background: var(--bg-hover); }
+.year__day.is-muted { visibility: hidden; }
+.year__day.is-busy { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.year__day.is-today { background: var(--tint-red); color: #fff; font-weight: 700; }
+
+/* Event sheet ------------------------------------------------------ */
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check-row { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.check-row input { accent-color: var(--accent); }
+
+.ev--compact {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 5px;
+  line-height: 1.25;
+}
+.ev--compact .ev__title { font-size: 11px; flex: none; max-width: 62%; }
+.ev--compact .ev__time { font-size: 10px; }

@@ -1,0 +1,100 @@
+/* Design tokens. Light values live on :root; dark overrides follow. */
+
+:root {
+  /* System tints, tuned to the light-mode palette. */
+  --tint-red: #ff3b30;
+  --tint-orange: #ff9500;
+  --tint-yellow: #ffcc00;
+  --tint-green: #34c759;
+  --tint-mint: #00c7be;
+  --tint-teal: #30b0c7;
+  --tint-cyan: #32ade6;
+  --tint-blue: #007aff;
+  --tint-indigo: #5856d6;
+  --tint-purple: #af52de;
+  --tint-pink: #ff2d55;
+  --tint-brown: #a2845e;
+  --tint-gray: #8e8e93;
+
+  --accent: var(--tint-blue);
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+
+  /* Surfaces */
+  --bg-window: #ffffff;
+  --bg-sidebar: #f2f2f4;
+  --bg-panel: #f7f7f8;
+  --bg-raised: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.045);
+  --bg-active: rgba(0, 0, 0, 0.08);
+  --bg-selected: rgba(0, 0, 0, 0.07);
+  --bg-field: rgba(0, 0, 0, 0.04);
+  --bg-scrim: rgba(0, 0, 0, 0.22);
+
+  /* Text */
+  --text: #1c1c1e;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #a1a1a6;
+  --text-on-accent: #ffffff;
+
+  /* Lines */
+  --line: rgba(0, 0, 0, 0.1);
+  --line-strong: rgba(0, 0, 0, 0.16);
+
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --sidebar-w: 240px;
+  --detail-w: 320px;
+  --toolbar-h: 52px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter,
+    system-ui, Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --tint-red: #ff453a;
+  --tint-orange: #ff9f0a;
+  --tint-yellow: #ffd60a;
+  --tint-green: #32d74b;
+  --tint-mint: #66d4cf;
+  --tint-teal: #40c8e0;
+  --tint-cyan: #64d2ff;
+  --tint-blue: #0a84ff;
+  --tint-indigo: #5e5ce6;
+  --tint-purple: #bf5af2;
+  --tint-pink: #ff375f;
+  --tint-brown: #ac8e68;
+  --tint-gray: #98989d;
+
+  --bg-window: #1e1e1e;
+  --bg-sidebar: #262628;
+  --bg-panel: #1a1a1c;
+  --bg-raised: #2c2c2e;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.11);
+  --bg-selected: rgba(255, 255, 255, 0.1);
+  --bg-field: rgba(255, 255, 255, 0.07);
+  --bg-scrim: rgba(0, 0, 0, 0.45);
+
+  --text: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #6e6e73;
+
+  --line: rgba(255, 255, 255, 0.11);
+  --line-strong: rgba(255, 255, 255, 0.2);
+
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  color-scheme: dark;
+}

@@ -1,0 +1,114 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg-panel);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* Thin, self-hiding scrollbars in the style of macOS overlay bars. */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll:hover {
+  scrollbar-color: var(--text-tertiary) transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+.scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  background-clip: content-box;
+}
+
+.tint-red { --tint: var(--tint-red); }
+.tint-orange { --tint: var(--tint-orange); }
+.tint-yellow { --tint: var(--tint-yellow); }
+.tint-green { --tint: var(--tint-green); }
+.tint-mint { --tint: var(--tint-mint); }
+.tint-teal { --tint: var(--tint-teal); }
+.tint-cyan { --tint: var(--tint-cyan); }
+.tint-blue { --tint: var(--tint-blue); }
+.tint-indigo { --tint: var(--tint-indigo); }
+.tint-purple { --tint: var(--tint-purple); }
+.tint-pink { --tint: var(--tint-pink); }
+.tint-brown { --tint: var(--tint-brown); }
+.tint-gray { --tint: var(--tint-gray); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

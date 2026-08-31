@@ -1,0 +1,206 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useApp } from '../../state/store'
+import { noteSnippet, visibleNotes } from '../../state/selectors'
+import {
+  addFolder, addNote, deleteFolder, emptyTrash, noteTitleOf, setPrefs,
+  setSelectedFolder, setSelectedNote, updateFolder,
+} from '../../state/actions'
+import { relativeStamp } from '../../lib/date'
+import { Icon } from '../ui/Icon'
+import { EmptyState, ToolButton } from '../ui/primitives'
+import { NoteEditor } from './NoteEditor'
+
+export function NotesApp({
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+}) {
+  const state = useApp()
+  const [query, setQuery] = useState('')
+
+  const notes = useMemo(() => visibleNotes(state, query), [state, query])
+  const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
+  const trashCount = state.notes.filter((n) => n.trashedAt).length
+
+  // Keep a valid selection as the filtered list changes.
+  useEffect(() => {
+    if (!notes.some((n) => n.id === state.selectedNoteId)) {
+      setSelectedNote(notes[0]?.id ?? null)
+    }
+  }, [notes, state.selectedNoteId])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        addNote()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const folderTitle =
+    state.selectedFolderId === 'all'
+      ? 'All Notes'
+      : state.selectedFolderId === 'trash'
+        ? 'Recently Deleted'
+        : (state.folders.find((f) => f.id === state.selectedFolderId)?.name ?? 'Notes')
+
+  return (
+    <div className="module">
+      <aside className="sidebar" hidden={!sidebarOpen} aria-label="Note folders">
+        <div className="sidebar__head">
+          <span className="sidebar__title">Notes</span>
+        </div>
+
+        <div className="sidebar__body scroll">
+          <ul className="side-list">
+            <li>
+              <button
+                type="button"
+                className={`side-item tint-gray${state.selectedFolderId === 'all' ? ' is-on' : ''}`}
+                onClick={() => setSelectedFolder('all')}
+              >
+                <span className="side-item__glyph side-item__glyph--plain"><Icon name="folder" size={16} /></span>
+                <span className="side-item__name">All Notes</span>
+                <span className="side-item__count">{state.notes.filter((n) => !n.trashedAt).length}</span>
+              </button>
+            </li>
+          </ul>
+
+          <div className="sidebar__section">Folders</div>
+          <ul className="side-list">
+            {state.folders.map((folder) => (
+              <li key={folder.id}>
+                <div className={`side-item tint-${folder.tint}${state.selectedFolderId === folder.id ? ' is-on' : ''}`}>
+                  <span className="side-item__glyph side-item__glyph--plain" onClick={() => setSelectedFolder(folder.id)}>
+                    <Icon name="folder" size={16} />
+                  </span>
+                  <input
+                    className="side-item__name side-item__rename"
+                    value={folder.name}
+                    onFocus={() => setSelectedFolder(folder.id)}
+                    onChange={(e) => updateFolder(folder.id, { name: e.target.value })}
+                    aria-label="Folder name"
+                  />
+                  <span className="side-item__count">
+                    {state.notes.filter((n) => n.folderId === folder.id && !n.trashedAt).length}
+                  </span>
+                  <span
+                    className="side-item__more"
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`Delete ${folder.name}`}
+                    onClick={() => {
+                      if (confirm(`Delete “${folder.name}”? Its notes move to Recently Deleted.`)) {
+                        deleteFolder(folder.id)
+                      }
+                    }}
+                  >
+                    <Icon name="trash" size={14} />
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="sidebar__section">Other</div>
+          <ul className="side-list">
+            <li>
+              <button
+                type="button"
+                className={`side-item tint-gray${state.selectedFolderId === 'trash' ? ' is-on' : ''}`}
+                onClick={() => setSelectedFolder('trash')}
+              >
+                <span className="side-item__glyph side-item__glyph--plain"><Icon name="trash" size={16} /></span>
+                <span className="side-item__name">Recently Deleted</span>
+                <span className="side-item__count">{trashCount}</span>
+              </button>
+            </li>
+          </ul>
+
+          <button type="button" className="side-add" onClick={() => addFolder('New Folder')}>
+            <Icon name="plus" size={15} strokeWidth={2.2} />
+            New Folder
+          </button>
+        </div>
+      </aside>
+
+      <div className="notes-list">
+        <header className="toolbar toolbar--tight">
+          <ToolButton icon="sidebar" label="Toggle sidebar" onClick={onToggleSidebar} active={sidebarOpen} />
+          <div className="search-field">
+            <Icon name="search" size={14} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search"
+              aria-label="Search notes"
+            />
+          </div>
+          <select
+            className="select input--sm notes-list__sort"
+            value={state.prefs.notesSort}
+            onChange={(e) => setPrefs({ notesSort: e.target.value as 'edited' | 'created' | 'title' })}
+            aria-label="Sort notes"
+          >
+            <option value="edited">Edited</option>
+            <option value="created">Created</option>
+            <option value="title">Title</option>
+          </select>
+          {state.selectedFolderId === 'trash' ? (
+            <ToolButton icon="trash" label="Empty trash" onClick={() => trashCount && emptyTrash()} />
+          ) : (
+            <ToolButton icon="plus" label="New note (⌘N)" onClick={() => addNote()} />
+          )}
+        </header>
+
+        <div className="notes-list__head">{folderTitle}</div>
+
+        <ul className="notes-list__items scroll">
+          {notes.length === 0 && (
+            <li className="notes-list__empty">{query ? 'No matches' : 'No notes'}</li>
+          )}
+          {notes.map((note) => (
+            <li key={note.id}>
+              <button
+                type="button"
+                className={`note-card${note.id === state.selectedNoteId ? ' is-on' : ''}`}
+                onClick={() => setSelectedNote(note.id)}
+              >
+                <span className="note-card__title">
+                  {note.pinned && <Icon name="pin" size={11} filled />}
+                  {noteTitleOf(note.body)}
+                </span>
+                <span className="note-card__meta">
+                  <span className="note-card__stamp">{relativeStamp(note.updatedAt)}</span>
+                  <span className="note-card__snippet">{noteSnippet(note.body)}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {selected ? (
+        <NoteEditor key={selected.id} note={selected} />
+      ) : (
+        <section className="editor">
+          <EmptyState
+            icon="note"
+            title="No Note Selected"
+            hint="Pick a note on the left, or press ⌘N to start a new one."
+            action={
+              <button type="button" className="btn btn--primary" onClick={() => addNote()}>
+                New Note
+              </button>
+            }
+          />
+        </section>
+      )}
+    </div>
+  )
+}
