@@ -14,12 +14,15 @@ export function MonthView({
   onOpenEvent,
   onOpenDay,
   onNewEvent,
+  compact = false,
 }: {
   state: AppState
   occurrences: EventOccurrence[]
   onOpenEvent: (id: string) => void
   onOpenDay: (iso: string) => void
   onNewEvent: (iso: string) => void
+  /** Phone widths: too narrow for labelled chips, so days carry dots instead. */
+  compact?: boolean
 }) {
   const { weekStartsOn } = state.prefs
   const days = useMemo(
@@ -34,7 +37,7 @@ export function MonthView({
   )
 
   return (
-    <div className="month">
+    <div className={`month${compact ? ' month--compact' : ''}`}>
       <div className="month__weekdays">
         {headers.map((h) => (
           <span key={h}>{h}</span>
@@ -74,6 +77,22 @@ export function MonthView({
                 {Number(day.slice(8))}
               </span>
 
+              {compact ? (
+                <div className="month__dots">
+                  {chips.slice(0, 4).map((chip, i) => {
+                    const tint =
+                      'reminder' in chip
+                        ? state.lists.find((l) => l.id === chip.reminder.listId)?.tint
+                        : state.calendars.find((c) => c.id === chip.event.calendarId)?.tint
+                    return (
+                      <span
+                        key={i}
+                        className={`month__dot tint-${tint ?? 'blue'}${'reminder' in chip ? ' is-reminder' : ''}`}
+                      />
+                    )
+                  })}
+                </div>
+              ) : (
               <div className="month__chips">
                 {chips.slice(0, MAX_CHIPS).map((chip, i) => {
                   if ('reminder' in chip) {
@@ -112,6 +131,7 @@ export function MonthView({
                 })}
                 {overflow > 0 && <span className="month__more">{overflow} more</span>}
               </div>
+              )}
             </div>
           )
         })}

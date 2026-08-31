@@ -9,6 +9,8 @@ import './styles/layout.css'
 import './styles/reminders.css'
 import './styles/calendar.css'
 import './styles/notes.css'
+import './styles/home.css'
+import './styles/phone.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root element #root not found')

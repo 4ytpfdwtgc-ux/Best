@@ -156,7 +156,7 @@ export interface Note {
 /* App state                                                           */
 /* ------------------------------------------------------------------ */
 
-export type ModuleName = 'reminders' | 'calendar' | 'notes'
+export type ModuleName = 'home' | 'reminders' | 'calendar' | 'notes'
 export type CalendarViewMode = 'day' | 'week' | 'month' | 'year'
 export type ThemeSetting = 'system' | 'light' | 'dark'
 

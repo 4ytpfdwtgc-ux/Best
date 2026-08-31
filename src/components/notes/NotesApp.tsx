@@ -6,6 +6,7 @@ import {
   setSelectedFolder, setSelectedNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
+import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { NoteEditor } from './NoteEditor'
@@ -18,18 +19,26 @@ export function NotesApp({
   onToggleSidebar: () => void
 }) {
   const state = useApp()
+  const isPhone = useIsPhone()
   const [query, setQuery] = useState('')
 
   const notes = useMemo(() => visibleNotes(state, query), [state, query])
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
   const trashCount = state.notes.filter((n) => n.trashedAt).length
 
-  // Keep a valid selection as the filtered list changes.
+  // Keep a valid selection as the filtered list changes. On a phone the editor
+  // is a pushed screen, so nothing is auto-selected — that would skip the list.
   useEffect(() => {
-    if (!notes.some((n) => n.id === state.selectedNoteId)) {
-      setSelectedNote(notes[0]?.id ?? null)
-    }
-  }, [notes, state.selectedNoteId])
+    if (notes.some((n) => n.id === state.selectedNoteId)) return
+    const next = isPhone ? null : (notes[0]?.id ?? null)
+    if (next !== state.selectedNoteId) setSelectedNote(next)
+  }, [notes, state.selectedNoteId, isPhone])
+
+  // Entering Notes on a phone lands on the list, not on whichever note was
+  // last open — the editor is a pushed screen you get to by tapping.
+  useEffect(() => {
+    if (isPhone) setSelectedNote(null)
+  }, [isPhone])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,9 +60,17 @@ export function NotesApp({
 
   return (
     <div className="module">
+      {isPhone && sidebarOpen && (
+        <div className="sidebar-scrim" onClick={onToggleSidebar} role="presentation" />
+      )}
       <aside className="sidebar" hidden={!sidebarOpen} aria-label="Note folders">
         <div className="sidebar__head">
           <span className="sidebar__title">Notes</span>
+          {isPhone && (
+            <button type="button" className="icon-btn icon-btn--lg" onClick={onToggleSidebar} aria-label="Close folders">
+              <Icon name="close" size={17} />
+            </button>
+          )}
         </div>
 
         <div className="sidebar__body scroll">
@@ -186,8 +203,12 @@ export function NotesApp({
       </div>
 
       {selected ? (
-        <NoteEditor key={selected.id} note={selected} />
-      ) : (
+        <NoteEditor
+          key={selected.id}
+          note={selected}
+          onBack={isPhone ? () => setSelectedNote(null) : undefined}
+        />
+      ) : isPhone ? null : (
         <section className="editor">
           <EmptyState
             icon="note"

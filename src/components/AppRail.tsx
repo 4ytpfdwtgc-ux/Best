@@ -2,6 +2,7 @@ import { Icon } from './ui/Icon'
 import type { ModuleName } from '../types'
 
 const MODULES: { id: ModuleName; icon: string; label: string; hint: string }[] = [
+  { id: 'home', icon: 'today', label: 'Today', hint: '⌘0' },
   { id: 'reminders', icon: 'checklist', label: 'Reminders', hint: '⌘1' },
   { id: 'calendar', icon: 'calendar', label: 'Calendar', hint: '⌘2' },
   { id: 'notes', icon: 'note', label: 'Notes', hint: '⌘3' },

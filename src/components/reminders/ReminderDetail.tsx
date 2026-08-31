@@ -19,8 +19,18 @@ const ALERT_OPTIONS = [
   { value: '1440', label: '1 day before' },
 ]
 
-/** The inspector shown to the right of the reminder list. */
-export function ReminderDetail({ reminder }: { reminder: Reminder }) {
+/**
+ * The inspector shown to the right of the reminder list — or, on a phone,
+ * as a full-screen sheet with its own dismiss button.
+ */
+export function ReminderDetail({
+  reminder,
+  onClose,
+}: {
+  reminder: Reminder
+  /** Present only when the inspector is presented as a sheet. */
+  onClose?: () => void
+}) {
   const state = useApp()
   const [newSubtask, setNewSubtask] = useState('')
   const [newTag, setNewTag] = useState('')
@@ -28,7 +38,14 @@ export function ReminderDetail({ reminder }: { reminder: Reminder }) {
   const set = (patch: Partial<Reminder>) => updateReminder(reminder.id, patch)
 
   return (
-    <aside className="detail scroll" aria-label="Reminder details">
+    <aside className={`detail scroll${onClose ? ' detail--sheet' : ''}`} aria-label="Reminder details">
+      {onClose && (
+        <div className="detail__sheetbar">
+          <button type="button" className="btn btn--plain" onClick={onClose}>
+            <Icon name="chevronLeft" size={15} strokeWidth={2.4} /> Back
+          </button>
+        </div>
+      )}
       <input
         className="detail__title"
         value={reminder.title}

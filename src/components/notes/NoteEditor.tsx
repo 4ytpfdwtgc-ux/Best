@@ -23,7 +23,7 @@ const LINE_PREFIX: Record<Format, string> = {
 
 const STRIP = /^(\s*)(#{1,3}\s+|[-*]\s+\[[ xX]\]\s?|[-*]\s+|\d+[.)]\s+|>\s?)?/
 
-export function NoteEditor({ note }: { note: Note }) {
+export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }) {
   const state = useApp()
   const [preview, setPreview] = useState(true)
   const [newTag, setNewTag] = useState('')
@@ -108,7 +108,8 @@ export function NoteEditor({ note }: { note: Note }) {
 
   if (note.trashedAt) {
     return (
-      <section className="editor">
+      <section className={`editor${onBack ? ' editor--pushed' : ''}`}>
+        {onBack && <BackBar onBack={onBack} />}
         <div className="editor__trashbar">
           <span>This note is in the Recently Deleted folder.</span>
           <button type="button" className="btn" onClick={() => restoreNote(note.id)}>Recover</button>
@@ -122,7 +123,8 @@ export function NoteEditor({ note }: { note: Note }) {
   }
 
   return (
-    <section className="editor" aria-label="Note editor">
+    <section className={`editor${onBack ? ' editor--pushed' : ''}`} aria-label="Note editor">
+      {onBack && <BackBar onBack={onBack} />}
       <header className="editor__bar">
         <div className="editor__formats">
           <button type="button" className="fmt" onClick={() => applyFormat('title')} title="Title">T</button>
@@ -243,5 +245,16 @@ export function NoteEditor({ note }: { note: Note }) {
         </div>
       </div>
     </section>
+  )
+}
+
+/** The pushed-screen back affordance used at phone widths. */
+function BackBar({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="editor__backbar">
+      <button type="button" className="btn btn--plain" onClick={onBack}>
+        <Icon name="chevronLeft" size={15} strokeWidth={2.4} /> Notes
+      </button>
+    </div>
   )
 }

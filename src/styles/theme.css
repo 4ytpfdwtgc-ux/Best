@@ -51,6 +51,8 @@
   --sidebar-w: 240px;
   --detail-w: 320px;
   --toolbar-h: 52px;
+  /* Width of the hour gutter in the day/week time grid. */
+  --tg-gutter: 56px;
 
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter,
     system-ui, Roboto, Helvetica, Arial, sans-serif;

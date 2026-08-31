@@ -9,10 +9,12 @@ import {
   addDays, addMonths, addYears, formatLongDate, formatMonthYear,
   monthGrid, startOfWeek, todayISO,
 } from '../../lib/date'
+import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
 import { EmptyState, Segmented, ToolButton } from '../ui/primitives'
 import { MiniMonth } from './MiniMonth'
 import { MonthView } from './MonthView'
+import { DayAgenda } from './DayAgenda'
 import { TimeGrid } from './TimeGrid'
 import { YearView } from './YearView'
 import { EventSheet, type EventDraft } from './EventSheet'
@@ -33,6 +35,7 @@ export function CalendarApp({
   onToggleSidebar: () => void
 }) {
   const state = useApp()
+  const isPhone = useIsPhone()
   const [draft, setDraft] = useState<EventDraft | null>(null)
   const { calendarView: view, calendarDate: date } = state
 
@@ -81,6 +84,11 @@ export function CalendarApp({
 
   const selectedEvent = state.events.find((e) => e.id === state.selectedEventId)
 
+  // Seven columns are unreadable at phone width; fall back to the day view.
+  useEffect(() => {
+    if (isPhone && view === 'week') setCalendarView('day')
+  }, [isPhone, view])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = ['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement)?.tagName ?? '')
@@ -115,9 +123,17 @@ export function CalendarApp({
 
   return (
     <div className="module">
+      {isPhone && sidebarOpen && (
+        <div className="sidebar-scrim" onClick={onToggleSidebar} role="presentation" />
+      )}
       <aside className="sidebar" hidden={!sidebarOpen} aria-label="Calendars">
         <div className="sidebar__head">
           <span className="sidebar__title">Calendar</span>
+          {isPhone && (
+            <button type="button" className="icon-btn icon-btn--lg" onClick={onToggleSidebar} aria-label="Close calendars">
+              <Icon name="close" size={17} />
+            </button>
+          )}
         </div>
         <div className="sidebar__body scroll">
           <MiniMonth
@@ -188,20 +204,36 @@ export function CalendarApp({
           <h1 className="toolbar__title">{heading}</h1>
           <div className="toolbar__spacer" />
           <button type="button" className="btn" onClick={() => setCalendarDate(todayISO())}>Today</button>
-          <Segmented value={view} options={VIEW_OPTIONS} onChange={setCalendarView} ariaLabel="Calendar view" />
+          <Segmented
+            value={view}
+            options={isPhone ? VIEW_OPTIONS.filter((o) => o.value !== 'week') : VIEW_OPTIONS}
+            onChange={setCalendarView}
+            ariaLabel="Calendar view"
+          />
           <ToolButton icon="plus" label="New event (⌘N)" onClick={() => setDraft({ startDate: date })} />
         </header>
 
         {state.calendars.every((c) => !c.visible) ? (
           <EmptyState icon="calendar" title="All calendars hidden" hint="Turn one back on in the sidebar to see events." />
         ) : view === 'month' ? (
-          <MonthView
-            state={state}
-            occurrences={occurrences}
-            onOpenEvent={setSelectedEvent}
-            onOpenDay={setCalendarDate}
-            onNewEvent={(iso) => setDraft({ startDate: iso })}
-          />
+          <>
+            <MonthView
+              state={state}
+              occurrences={occurrences}
+              onOpenEvent={setSelectedEvent}
+              onOpenDay={setCalendarDate}
+              onNewEvent={(iso) => setDraft({ startDate: iso })}
+              compact={isPhone}
+            />
+            {isPhone && (
+              <DayAgenda
+                state={state}
+                date={date}
+                occurrences={occurrences}
+                onOpenEvent={setSelectedEvent}
+              />
+            )}
+          </>
         ) : view === 'year' ? (
           <YearView
             state={state}

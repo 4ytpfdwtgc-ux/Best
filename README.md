@@ -1,8 +1,12 @@
 # Cadence
 
 An all-in-one **Reminders**, **Calendar** and **Notes** app in a single window,
-borrowing the interaction model of Apple's three apps. This is the baseline to
-build on: everything runs locally in the browser with no backend.
+borrowing the interaction model of Apple's three apps. Built for iPhone Safari
+first — installable to the Home screen — and equally at home on a desktop
+browser. Everything runs locally with no backend.
+
+Opening the app lands on the **split Today view**: reminders in the top third,
+the day's calendar in the bottom two thirds, both aimed at the same day.
 
 ```bash
 npm install
@@ -13,8 +17,18 @@ npm run build      # typecheck, then production build into dist/
 
 ## What's in the baseline
 
+### Today (the split view)
+- The launch screen: reminders due today (overdue included) in the top third,
+  the day's hour-by-hour calendar in the bottom two thirds.
+- A week strip moves both panes together; either pane header opens the full app.
+- On today the grid opens on the day's first event, or the current hour when the
+  day is empty; the red now-line marks the time.
+- In landscape the split turns on its side — reminders left third, calendar
+  right two thirds — because a landscape phone has width but no height.
+
 ### Shell
-- A vertical app rail switches between the three apps (`⌘1` / `⌘2` / `⌘3`).
+- A vertical app rail switches between the apps (`⌘0` / `⌘1` / `⌘2` / `⌘3`); at
+  phone widths it becomes an iOS-style bottom tab bar.
 - **Quick Find** (`⌘K` or `/`) searches reminders, events and notes at once and
   jumps straight to the hit.
 - Light / dark / system themes, a system-tint accent picker, week-start,
@@ -33,7 +47,9 @@ npm run build      # typecheck, then production build into dist/
 
 ### Calendar
 - Day, week, month and year views (`D` / `W` / `M` / `Y`), arrow keys to step,
-  `⌘T` for today.
+  `⌘T` for today. On a phone the week view is dropped (seven columns are
+  unreadable) and the month grid shows dots with a day agenda beneath it, the
+  way iOS Calendar does.
 - A week/day time grid with overlapping-event column layout, an all-day band and
   a live current-time indicator.
 - Multiple calendars with colors and per-calendar visibility, plus a sidebar
@@ -53,7 +69,7 @@ npm run build      # typecheck, then production build into dist/
 
 | Shortcut | Action |
 | --- | --- |
-| `⌘1` `⌘2` `⌘3` | Switch between Reminders, Calendar, Notes |
+| `⌘0` `⌘1` `⌘2` `⌘3` | Switch between Today, Reminders, Calendar, Notes |
 | `⌘K` or `/` | Quick Find |
 | `⌘N` | New reminder / event / note |
 | `⌘T` | Jump to today (Calendar) |
@@ -63,19 +79,37 @@ npm run build      # typecheck, then production build into dist/
 | `⌘,` | Settings |
 | `⌘B` `⌘I` `⇧⌘L` | Bold / italic / checklist (Notes) |
 
+## On iPhone
+
+- Add to Home Screen runs it standalone, with no Safari chrome
+  (`manifest.webmanifest` plus the `apple-mobile-web-app-*` tags).
+- Layout uses `100dvh` and `env(safe-area-inset-*)`, so nothing hides behind the
+  status bar, the home indicator, or a notch in landscape.
+- Every text field is 16px at phone widths — below that iOS zooms the page when
+  a field takes focus. Pinch-zoom is deliberately left enabled.
+- Sidebars become modal drawers, the reminder inspector and the note editor
+  become pushed full-screen screens, and dialogs slide up from the bottom.
+- Hover-revealed controls stay visible on touch, and tap targets grow to ~34px
+  under `@media (hover: none)`.
+
+Verified at 375×667 (SE), 375×812, 393×852, 430×932, landscape, and iPad
+portrait: the split holds at exactly 1/3 and nothing overflows horizontally.
+
 ## Layout
 
 ```
 src/
-  types.ts               Shared data model for all three apps
+  types.ts               Shared data model for all four views
   lib/date.ts            ISO-day + HH:mm helpers and Intl formatting
   lib/recurrence.ts      Repeat rules: next occurrence, expansion over a range
+  lib/useMediaQuery.ts   Phone-width detection for layout that JS must know about
   state/store.ts         Tiny pub/sub store, localStorage persistence
   state/seed.ts          First-run sample content
   state/actions.ts       Every mutation, including the cross-app ones
   state/selectors.ts     Filtering, grouping, event layout, unified search
-  components/            App rail, Quick Find, Settings + one folder per app
-  styles/                Design tokens, base, then per-app stylesheets
+  components/home/       The split Today view and its week strip
+  components/            App rail, tab bar, Quick Find, Settings + one folder per app
+  styles/                Design tokens, base, per-app sheets, then phone.css
 test/                    Unit tests for the date and recurrence logic
 ```
 
@@ -86,4 +120,4 @@ from serializing `Date` objects.
 ## Not yet built
 
 Sync, notifications that actually fire, shared lists, location-based alerts,
-attachments, drag-to-reschedule, and undo.
+attachments, drag-to-reschedule, swipe gestures, and undo.

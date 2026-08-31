@@ -24,6 +24,9 @@ function load(): AppState {
     return {
       ...base,
       ...parsed,
+      // The split Home view is the front door: a launch always lands there
+      // rather than resuming whichever tab happened to be open last.
+      module: 'home',
       prefs: { ...base.prefs, ...(parsed.prefs ?? {}) },
     } as AppState
   } catch {
@@ -58,6 +61,10 @@ export function getState(): AppState {
 /** Apply a partial update, or a function of the current state. */
 export function setState(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)): void {
   const next = typeof patch === 'function' ? patch(state) : patch
+  // A no-op write would still hand out a new state object, which invalidates
+  // every downstream useMemo and can spin a component into an update loop.
+  const changed = (Object.keys(next) as (keyof AppState)[]).some((k) => next[k] !== state[k])
+  if (!changed) return
   state = { ...state, ...next }
   persist()
   listeners.forEach((l) => l())

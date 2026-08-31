@@ -1,0 +1,14 @@
+{
+  "name": "Cadence — Reminders, Calendar, Notes",
+  "short_name": "Cadence",
+  "description": "Reminders, Calendar and Notes in one window.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#f5f5f7",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

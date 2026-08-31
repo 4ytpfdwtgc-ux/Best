@@ -3,6 +3,7 @@ import { useApp } from '../../state/store'
 import { groupByDate, selectionTint, selectionTitle, visibleReminders } from '../../state/selectors'
 import { addReminder, clearCompleted, setPrefs, setSelectedReminder } from '../../state/actions'
 import { friendlyDate, todayISO } from '../../lib/date'
+import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { RemindersSidebar } from './RemindersSidebar'
@@ -19,6 +20,7 @@ export function RemindersApp({
   onToggleSidebar: () => void
 }) {
   const state = useApp()
+  const isPhone = useIsPhone()
   const [query, setQuery] = useState('')
   const [sheet, setSheet] = useState<{ list?: ReminderList } | null>(null)
   const [justAdded, setJustAdded] = useState<string | null>(null)
@@ -63,11 +65,25 @@ export function RemindersApp({
 
   return (
     <div className="module">
+      {isPhone && sidebarOpen && (
+        <div className="sidebar-scrim" onClick={onToggleSidebar} role="presentation" />
+      )}
       <aside className="sidebar" hidden={!sidebarOpen} aria-label="Reminder lists">
         <div className="sidebar__head">
           <span className="sidebar__title">Reminders</span>
+          {isPhone && (
+            <button type="button" className="icon-btn icon-btn--lg" onClick={onToggleSidebar} aria-label="Close lists">
+              <Icon name="close" size={17} />
+            </button>
+          )}
         </div>
-        <div className="sidebar__body scroll">
+        <div
+          className="sidebar__body scroll"
+          onClick={() => {
+            // On a phone the drawer is modal, so choosing a list dismisses it.
+            if (isPhone) onToggleSidebar()
+          }}
+        >
           <RemindersSidebar onNewList={() => setSheet({})} onEditList={(list) => setSheet({ list })} />
         </div>
       </aside>
@@ -142,7 +158,13 @@ export function RemindersApp({
         </div>
       </section>
 
-      {selected && <ReminderDetail key={selected.id} reminder={selected} />}
+      {selected && (
+        <ReminderDetail
+          key={selected.id}
+          reminder={selected}
+          onClose={isPhone ? () => setSelectedReminder(null) : undefined}
+        />
+      )}
       {sheet && <ListSheet list={sheet.list} onClose={() => setSheet(null)} />}
     </div>
   )

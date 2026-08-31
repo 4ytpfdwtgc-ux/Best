@@ -14,6 +14,9 @@ export function TimeGrid({
   onOpenEvent,
   onNewEvent,
   onSelectDay,
+  showHeader = true,
+  showReminders = true,
+  scrollToMinutes,
 }: {
   state: AppState
   days: string[]
@@ -21,6 +24,12 @@ export function TimeGrid({
   onOpenEvent: (id: string) => void
   onNewEvent: (iso: string, time?: string) => void
   onSelectDay: (iso: string) => void
+  /** Hidden when an outer view already labels the days (the Home split). */
+  showHeader?: boolean
+  /** Off in the Home split, where the pane above already lists reminders. */
+  showReminders?: boolean
+  /** Minutes from midnight to open on. Defaults to 7:30am. */
+  scrollToMinutes?: number
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const today = todayISO()
@@ -30,17 +39,21 @@ export function TimeGrid({
   // Open on the working day rather than at midnight.
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollTop = Math.max(0, (7.5 * HOUR_PX) - 20)
-  }, [])
+    if (!el) return
+    const anchor = (scrollToMinutes ?? 7.5 * 60) / 60
+    el.scrollTop = Math.max(0, anchor * HOUR_PX - 20)
+  }, [scrollToMinutes, days[0]])
 
   const allDayRows = days.map((day) =>
     occurrencesOnDay(occurrences, day).filter((o) => o.event.allDay),
   )
-  const hasAllDay = allDayRows.some((r) => r.length > 0) || state.prefs.showRemindersOnCalendar
+  const overlayReminders = showReminders && state.prefs.showRemindersOnCalendar
+  const hasAllDay = allDayRows.some((r) => r.length > 0) || overlayReminders
 
   return (
     <div className="tg">
-      <div className="tg__header" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
+      {showHeader && (
+      <div className="tg__header" style={{ gridTemplateColumns: `var(--tg-gutter) repeat(${days.length}, 1fr)` }}>
         <span />
         {days.map((day) => (
           <button
@@ -54,12 +67,13 @@ export function TimeGrid({
           </button>
         ))}
       </div>
+      )}
 
       {hasAllDay && (
-        <div className="tg__allday" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
+        <div className="tg__allday" style={{ gridTemplateColumns: `var(--tg-gutter) repeat(${days.length}, 1fr)` }}>
           <span className="tg__allday-label">all-day</span>
           {days.map((day, i) => {
-            const reminders = state.prefs.showRemindersOnCalendar
+            const reminders = overlayReminders
               ? state.reminders.filter((r) => r.dueDate === day && !r.completed)
               : []
             return (
@@ -96,7 +110,7 @@ export function TimeGrid({
       )}
 
       <div className="tg__scroll scroll" ref={scrollRef}>
-        <div className="tg__body" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)`, height: 24 * HOUR_PX }}>
+        <div className="tg__body" style={{ gridTemplateColumns: `var(--tg-gutter) repeat(${days.length}, 1fr)`, height: 24 * HOUR_PX }}>
           <div className="tg__hours">
             {Array.from({ length: 24 }, (_, h) => (
               <span key={h} className="tg__hour" style={{ top: h * HOUR_PX }}>

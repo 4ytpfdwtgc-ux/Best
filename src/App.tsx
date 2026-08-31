@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from './state/store'
 import { setModule } from './state/actions'
+import { useIsPhone } from './lib/useMediaQuery'
 import { AppRail } from './components/AppRail'
+import { TabBar } from './components/TabBar'
 import { QuickFind } from './components/QuickFind'
 import { SettingsSheet } from './components/SettingsSheet'
+import { HomeApp } from './components/home/HomeApp'
 import { RemindersApp } from './components/reminders/RemindersApp'
 import { CalendarApp } from './components/calendar/CalendarApp'
 import { NotesApp } from './components/notes/NotesApp'
 import type { ModuleName } from './types'
 
 const MODULE_KEYS: Record<string, ModuleName> = {
+  '0': 'home',
   '1': 'reminders',
   '2': 'calendar',
   '3': 'notes',
@@ -17,6 +21,7 @@ const MODULE_KEYS: Record<string, ModuleName> = {
 
 export default function App() {
   const state = useApp()
+  const isPhone = useIsPhone()
   const [quickFind, setQuickFind] = useState(false)
   const [settings, setSettings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -28,6 +33,10 @@ export default function App() {
     const apply = () => {
       const dark = state.prefs.theme === 'dark' || (state.prefs.theme === 'system' && media.matches)
       root.dataset.theme = dark ? 'dark' : 'light'
+      // Keep the iOS status bar and address bar in step with the app chrome.
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', dark ? '#1a1a1c' : '#f5f5f7')
     }
     apply()
     media.addEventListener('change', apply)
@@ -37,6 +46,9 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', `var(--tint-${state.prefs.accent})`)
   }, [state.prefs.accent])
+
+  /* On a phone the sidebar is an overlay, so it starts closed. */
+  useEffect(() => setSidebarOpen(!isPhone), [isPhone])
 
   const isTyping = useCallback(() => {
     const el = document.activeElement as HTMLElement | null
@@ -75,20 +87,32 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [isTyping])
 
+  const paneProps = {
+    sidebarOpen,
+    onToggleSidebar: () => setSidebarOpen((v) => !v),
+  }
+
   return (
-    <div className="app">
-      <AppRail
-        module={state.module}
-        onSelect={setModule}
-        onSettings={() => setSettings(true)}
-        onSearch={() => setQuickFind(true)}
-      />
+    <div className={`app${isPhone ? ' app--phone' : ''}`}>
+      {!isPhone && (
+        <AppRail
+          module={state.module}
+          onSelect={setModule}
+          onSettings={() => setSettings(true)}
+          onSearch={() => setQuickFind(true)}
+        />
+      )}
 
       <main className="app__main">
-        {state.module === 'reminders' && <RemindersApp sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />}
-        {state.module === 'calendar' && <CalendarApp sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />}
-        {state.module === 'notes' && <NotesApp sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />}
+        {state.module === 'home' && (
+          <HomeApp onOpenSearch={() => setQuickFind(true)} onOpenSettings={() => setSettings(true)} />
+        )}
+        {state.module === 'reminders' && <RemindersApp {...paneProps} />}
+        {state.module === 'calendar' && <CalendarApp {...paneProps} />}
+        {state.module === 'notes' && <NotesApp {...paneProps} />}
       </main>
+
+      {isPhone && <TabBar module={state.module} onSelect={setModule} />}
 
       {quickFind && <QuickFind onClose={() => setQuickFind(false)} />}
       {settings && <SettingsSheet onClose={() => setSettings(false)} />}

@@ -297,3 +297,89 @@
 }
 .ev--compact .ev__title { font-size: 11px; flex: none; max-width: 62%; }
 .ev--compact .ev__time { font-size: 10px; }
+
+/* Compact month (phone): dots stand in for chips ------------------- */
+
+.month--compact .month__cell { align-items: center; gap: 1px; padding: 4px 1px; }
+.month--compact .month__date { align-self: center; }
+.month__dots {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 6px;
+}
+.month__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tint, var(--tint-blue));
+}
+.month__dot.is-reminder { background: none; box-shadow: inset 0 0 0 1.5px var(--tint, var(--tint-gray)); }
+
+/* Day agenda beneath the compact month ----------------------------- */
+
+.agenda {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  max-height: 42%;
+  min-height: 120px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-panel);
+}
+.agenda__head {
+  margin: 0;
+  padding: 8px 14px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.agenda__list { list-style: none; margin: 0; padding: 0 10px 12px; flex: 1; min-height: 0; }
+.agenda__empty { padding: 14px 4px; color: var(--text-tertiary); }
+.agenda__row + .agenda__row { box-shadow: inset 0 1px 0 var(--line); }
+.agenda__btn {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+  padding: 8px 4px;
+  text-align: left;
+}
+.agenda__time {
+  flex: none;
+  width: 62px;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.agenda__end { color: var(--text-tertiary); font-size: 11px; }
+.agenda__bar {
+  flex: none;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--tint, var(--tint-blue));
+}
+.agenda__bar--dashed { background: repeating-linear-gradient(var(--tint, var(--tint-gray)) 0 3px, transparent 3px 6px); }
+.agenda__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.agenda__title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agenda__sub {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

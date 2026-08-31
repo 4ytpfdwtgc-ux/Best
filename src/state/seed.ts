@@ -143,7 +143,7 @@ export function createInitialState(): AppState {
 
   return {
     version: 1,
-    module: 'reminders',
+    module: 'home',
     prefs: {
       theme: 'system',
       accent: 'blue',
