@@ -171,8 +171,41 @@ body {
   }
   .editor__bar { height: 44px; overflow-x: auto; scrollbar-width: none; }
   .editor__bar::-webkit-scrollbar { display: none; }
-  .editor__formats { flex: none; }
-  .editor__page { padding: 14px 16px 40px; }
+  .editor__page { padding: 0 0 30vh; }
+
+  /* A phone has no room for the gutter, and no hover to reveal it. */
+  .page { padding: 20px 20px 0; }
+  .page__blocks .blk__gutter { display: none; }
+  .page__title { font-size: 30px; }
+  .page__icon { font-size: 38px; }
+  .page__tail { min-height: 60px; }
+  .editor__tags { padding: 12px 20px 0; }
+  .blk__text { font-size: 16px; }
+  .slash { width: calc(100vw - 32px); left: 16px !important; }
+  .blockmenu { width: calc(100vw - 32px); left: 16px !important; }
+  .prop__menu,
+  .viewbar__menu { width: calc(100vw - 32px); left: 16px !important; }
+
+  /* One scrolling row of database chrome, rather than a wrapped block. */
+  .viewtabs {
+    height: 42px;
+    padding: 0 8px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .viewtabs::-webkit-scrollbar { display: none; }
+  .viewtabs .toolbar__spacer { display: none; }
+  .viewtabs__tabs { flex: none; }
+  .viewbar { flex: none; margin-left: 6px; }
+
+  .db-list { padding: 4px 8px 60px; }
+  .db-row { align-items: flex-start; padding: 6px; }
+  .db-row__check { margin-top: 3px; }
+  .db-row__open { flex-direction: column; align-items: flex-start; gap: 3px; padding: 0; }
+  .db-row__title { max-width: 100%; white-space: normal; }
+  .db-row__meta { flex-wrap: wrap; overflow: visible; row-gap: 4px; }
+  .db-row__list { margin-left: 0; padding-left: 0; }
 
   /* Toolbars get tighter and pick up the status-bar inset. */
   .toolbar {

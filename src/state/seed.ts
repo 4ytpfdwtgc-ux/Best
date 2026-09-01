@@ -1,17 +1,116 @@
-import type { AppState, Calendar, CalendarEvent, Folder, Note, Reminder, ReminderList, Tag } from '../types'
+import type {
+  AppState, Block, Calendar, CalendarEvent, DatabaseView, Folder, Note,
+  PropertyDef, Reminder, ReminderList, Tag,
+} from '../types'
 import { addDays, nowISO, todayISO } from '../lib/date'
+import { emptyBlock } from '../lib/blocks'
 import { uid } from '../lib/id'
 
-/**
- * First-run content. Empty apps are hard to evaluate, so the baseline ships
- * with a small, realistic set of lists, events and notes.
- */
+export const SCHEMA_VERSION = 2
+
+/** Ids of the built-in properties, referenced by the seeded views. */
+export const PROP = {
+  status: 'prop_status',
+  effort: 'prop_effort',
+  area: 'prop_area',
+  estimate: 'prop_estimate',
+} as const
+
+/** The Status option ids, which the completion checkbox keeps in step. */
+export const STATUS = {
+  todo: 'opt_status_todo',
+  doing: 'opt_status_doing',
+  done: 'opt_status_done',
+} as const
+
+export function defaultProperties(): PropertyDef[] {
+  return [
+    {
+      id: PROP.status,
+      name: 'Status',
+      type: 'select',
+      options: [
+        { id: STATUS.todo, name: 'Not started', tint: 'gray' },
+        { id: STATUS.doing, name: 'In progress', tint: 'blue' },
+        { id: STATUS.done, name: 'Done', tint: 'green' },
+      ],
+    },
+    {
+      id: PROP.effort,
+      name: 'Effort',
+      type: 'select',
+      options: [
+        { id: 'opt_effort_quick', name: 'Quick', tint: 'green' },
+        { id: 'opt_effort_medium', name: 'Medium', tint: 'yellow' },
+        { id: 'opt_effort_deep', name: 'Deep', tint: 'red' },
+      ],
+    },
+    {
+      id: PROP.area,
+      name: 'Area',
+      type: 'multiSelect',
+      options: [
+        { id: 'opt_area_work', name: 'Work', tint: 'orange' },
+        { id: 'opt_area_home', name: 'Home', tint: 'green' },
+        { id: 'opt_area_errands', name: 'Errands', tint: 'teal' },
+        { id: 'opt_area_health', name: 'Health', tint: 'purple' },
+      ],
+    },
+    { id: PROP.estimate, name: 'Estimate', type: 'number' },
+  ]
+}
+
+export function defaultViews(): DatabaseView[] {
+  return [
+    {
+      id: 'view_list',
+      name: 'List',
+      mode: 'list',
+      groupBy: 'due',
+      sortBy: 'due',
+      sortDir: 'asc',
+      filters: [],
+      visibleProps: [PROP.status, PROP.area],
+      hideCompleted: true,
+    },
+    {
+      id: 'view_board',
+      name: 'Board',
+      mode: 'board',
+      groupBy: PROP.status,
+      sortBy: 'due',
+      sortDir: 'asc',
+      filters: [],
+      visibleProps: [PROP.effort, PROP.area],
+      hideCompleted: false,
+    },
+    {
+      id: 'view_table',
+      name: 'Table',
+      mode: 'table',
+      groupBy: null,
+      sortBy: 'due',
+      sortDir: 'asc',
+      filters: [],
+      visibleProps: [PROP.status, PROP.effort, PROP.area, PROP.estimate],
+      hideCompleted: false,
+    },
+  ]
+}
+
+const b = (
+  type: Block['type'],
+  text: string,
+  extra: Partial<Block> = {},
+): Block => ({ ...emptyBlock(type), text, ...extra })
+
+/** First-run content. An empty app is hard to judge, so the baseline ships full. */
 export function createInitialState(): AppState {
   const today = todayISO()
   const now = nowISO()
 
   const lists: ReminderList[] = [
-    { id: 'list_inbox', name: 'Inbox', tint: 'blue', symbol: '📥', sortIndex: 0, groupId: null },
+    { id: 'list_inbox', name: 'Inbox', tint: 'gray', symbol: '📥', sortIndex: 0, groupId: null },
     { id: 'list_work', name: 'Work', tint: 'orange', symbol: '💼', sortIndex: 1, groupId: null },
     { id: 'list_home', name: 'Home', tint: 'green', symbol: '🏡', sortIndex: 2, groupId: null },
     { id: 'list_shop', name: 'Groceries', tint: 'pink', symbol: '🛒', sortIndex: 3, groupId: null },
@@ -23,14 +122,16 @@ export function createInitialState(): AppState {
     { id: 'tag_focus', name: 'focus', tint: 'indigo' },
   ]
 
-  const r = (partial: Partial<Reminder> & { title: string; listId: string; sortIndex: number }): Reminder => ({
+  const r = (
+    partial: Partial<Reminder> & { title: string; listId: string; sortIndex: number },
+  ): Reminder => ({
     id: uid('rem'),
-    notes: undefined,
     priority: 0,
     flagged: false,
     completed: false,
     tags: [],
     subtasks: [],
+    props: { [PROP.status]: STATUS.todo },
     createdAt: now,
     updatedAt: now,
     ...partial,
@@ -38,7 +139,7 @@ export function createInitialState(): AppState {
 
   const reminders: Reminder[] = [
     r({
-      title: 'Ship the baseline build',
+      title: 'Ship the Notion pass',
       listId: 'list_work',
       sortIndex: 0,
       dueDate: today,
@@ -46,22 +147,67 @@ export function createInitialState(): AppState {
       priority: 3,
       flagged: true,
       tags: ['tag_focus'],
-      notes: 'Reminders, Calendar and Notes in one window.',
+      notes: 'Blocks, slash menu, database views.',
+      props: { [PROP.status]: STATUS.doing, [PROP.effort]: 'opt_effort_deep', [PROP.area]: ['opt_area_work'], [PROP.estimate]: 240 },
       subtasks: [
-        { id: uid('sub'), title: 'Data model', completed: true },
-        { id: uid('sub'), title: 'Month + week views', completed: true },
-        { id: uid('sub'), title: 'Quick Find', completed: false },
+        { id: uid('sub'), title: 'Block editor', completed: true },
+        { id: uid('sub'), title: 'Board view', completed: true },
+        { id: uid('sub'), title: 'Filters', completed: false },
       ],
     }),
-    r({ title: 'Stand-up notes', listId: 'list_work', sortIndex: 1, dueDate: today, dueTime: '09:30', recurrence: { freq: 'weekly', interval: 1, byWeekday: [1, 2, 3, 4, 5] } }),
-    r({ title: 'Review design feedback', listId: 'list_work', sortIndex: 2, dueDate: addDays(today, 2), priority: 2 }),
-    r({ title: 'Water the plants', listId: 'list_home', sortIndex: 0, dueDate: today, recurrence: { freq: 'daily', interval: 3 }, tags: ['tag_errand'] }),
-    r({ title: 'Change the air filter', listId: 'list_home', sortIndex: 1, dueDate: addDays(today, 12), recurrence: { freq: 'monthly', interval: 3 } }),
-    r({ title: 'Call the plumber', listId: 'list_home', sortIndex: 2, flagged: true, tags: ['tag_urgent'] }),
-    r({ title: 'Oat milk', listId: 'list_shop', sortIndex: 0, tags: ['tag_errand'] }),
-    r({ title: 'Coffee beans', listId: 'list_shop', sortIndex: 1, tags: ['tag_errand'] }),
-    r({ title: 'Sourdough', listId: 'list_shop', sortIndex: 2, completed: true, completedAt: now }),
-    r({ title: 'Book the dentist', listId: 'list_inbox', sortIndex: 0, dueDate: addDays(today, 1), dueTime: '11:00' }),
+    r({
+      title: 'Stand-up notes',
+      listId: 'list_work',
+      sortIndex: 1,
+      dueDate: today,
+      dueTime: '09:30',
+      recurrence: { freq: 'weekly', interval: 1, byWeekday: [1, 2, 3, 4, 5] },
+      props: { [PROP.status]: STATUS.todo, [PROP.effort]: 'opt_effort_quick', [PROP.area]: ['opt_area_work'], [PROP.estimate]: 15 },
+    }),
+    r({
+      title: 'Review design feedback',
+      listId: 'list_work',
+      sortIndex: 2,
+      dueDate: addDays(today, 2),
+      priority: 2,
+      props: { [PROP.status]: STATUS.todo, [PROP.effort]: 'opt_effort_medium', [PROP.area]: ['opt_area_work'] },
+    }),
+    r({
+      title: 'Water the plants',
+      listId: 'list_home',
+      sortIndex: 0,
+      dueDate: today,
+      recurrence: { freq: 'daily', interval: 3 },
+      tags: ['tag_errand'],
+      props: { [PROP.status]: STATUS.todo, [PROP.effort]: 'opt_effort_quick', [PROP.area]: ['opt_area_home'] },
+    }),
+    r({
+      title: 'Change the air filter',
+      listId: 'list_home',
+      sortIndex: 1,
+      dueDate: addDays(today, 12),
+      recurrence: { freq: 'monthly', interval: 3 },
+      props: { [PROP.status]: STATUS.todo, [PROP.area]: ['opt_area_home'] },
+    }),
+    r({
+      title: 'Call the plumber',
+      listId: 'list_home',
+      sortIndex: 2,
+      flagged: true,
+      tags: ['tag_urgent'],
+      props: { [PROP.status]: STATUS.doing, [PROP.effort]: 'opt_effort_quick', [PROP.area]: ['opt_area_home', 'opt_area_errands'] },
+    }),
+    r({ title: 'Oat milk', listId: 'list_shop', sortIndex: 0, tags: ['tag_errand'], props: { [PROP.status]: STATUS.todo, [PROP.area]: ['opt_area_errands'] } }),
+    r({ title: 'Coffee beans', listId: 'list_shop', sortIndex: 1, tags: ['tag_errand'], props: { [PROP.status]: STATUS.todo, [PROP.area]: ['opt_area_errands'] } }),
+    r({ title: 'Sourdough', listId: 'list_shop', sortIndex: 2, completed: true, completedAt: now, props: { [PROP.status]: STATUS.done, [PROP.area]: ['opt_area_errands'] } }),
+    r({
+      title: 'Book the dentist',
+      listId: 'list_inbox',
+      sortIndex: 0,
+      dueDate: addDays(today, 1),
+      dueTime: '11:00',
+      props: { [PROP.status]: STATUS.todo, [PROP.effort]: 'opt_effort_quick', [PROP.area]: ['opt_area_health'] },
+    }),
   ]
 
   const calendars: Calendar[] = [
@@ -70,7 +216,9 @@ export function createInitialState(): AppState {
     { id: 'cal_family', name: 'Family', tint: 'green', visible: true, sortIndex: 2 },
   ]
 
-  const e = (partial: Partial<CalendarEvent> & { title: string; calendarId: string; startDate: string }): CalendarEvent => ({
+  const e = (
+    partial: Partial<CalendarEvent> & { title: string; calendarId: string; startDate: string },
+  ): CalendarEvent => ({
     id: uid('evt'),
     allDay: false,
     endDate: partial.startDate,
@@ -91,7 +239,7 @@ export function createInitialState(): AppState {
   ]
 
   const folders: Folder[] = [
-    { id: 'fold_notes', name: 'Notes', tint: 'yellow', sortIndex: 0 },
+    { id: 'fold_notes', name: 'Notes', tint: 'gray', sortIndex: 0 },
     { id: 'fold_work', name: 'Work', tint: 'orange', sortIndex: 1 },
     { id: 'fold_ideas', name: 'Ideas', tint: 'purple', sortIndex: 2 },
   ]
@@ -100,49 +248,66 @@ export function createInitialState(): AppState {
     {
       id: uid('note'),
       folderId: 'fold_work',
+      title: 'Cadence',
+      icon: '📐',
       pinned: true,
       locked: false,
       tags: ['tag_focus'],
       createdAt: now,
       updatedAt: now,
-      body: [
-        '# Cadence — baseline',
-        '',
-        'One window for the three things that actually run a week.',
-        '',
-        '## Shipped',
-        '- [x] Shared data model with lightweight recurrence',
-        '- [x] Reminders with smart lists, tags and subtasks',
-        '- [x] Day / week / month / year calendar views',
-        '- [ ] Sync',
-        '',
-        '> Keyboard: ⌘1/⌘2/⌘3 switch apps, ⌘K opens Quick Find.',
-      ].join('\n'),
+      blocks: [
+        b('text', 'One window for the three things that actually run a week.'),
+        b('callout', 'Press / on an empty line to insert any block. Drag the handle to reorder.', { tint: 'blue', icon: '💡' }),
+        b('h2', 'Shipped'),
+        b('todo', 'Shared data model with lightweight recurrence', { checked: true }),
+        b('todo', 'Block editor with slash commands', { checked: true }),
+        b('todo', 'Board, table and list views', { checked: true }),
+        b('todo', 'Sync', { checked: false }),
+        b('h2', 'Notes'),
+        b('toggle', 'Why blocks are stored flat'),
+        b('text', 'An indent level keeps reordering and keyboard handling simple, and a toggle just hides the deeper blocks after it.', { indent: 1 }),
+        b('divider', ''),
+        b('quote', 'Keyboard: ⌘1–⌘3 switch apps, ⌘K opens search.'),
+      ],
     },
     {
       id: uid('note'),
       folderId: 'fold_notes',
+      title: 'Packing list',
+      icon: '🧳',
       pinned: false,
       locked: false,
       tags: [],
       createdAt: now,
       updatedAt: now,
-      body: ['Packing list', '', '- [ ] Passport', '- [ ] Charger + adapter', '- [ ] Sunscreen', '- [x] Headphones'].join('\n'),
+      blocks: [
+        b('todo', 'Passport'),
+        b('todo', 'Charger + adapter'),
+        b('todo', 'Sunscreen'),
+        b('todo', 'Headphones', { checked: true }),
+      ],
     },
     {
       id: uid('note'),
       folderId: 'fold_ideas',
+      title: 'Weekend projects',
+      icon: '🔨',
       pinned: false,
       locked: false,
       tags: [],
       createdAt: now,
       updatedAt: now,
-      body: ['Weekend project ideas', '', '1. A tiny synth in the browser', '2. Rebuild the bookshelf', '3. **Learn to make focaccia**'].join('\n'),
+      blocks: [
+        b('numbered', 'A tiny synth in the browser'),
+        b('numbered', 'Rebuild the bookshelf'),
+        b('numbered', 'Learn to make focaccia'),
+        b('code', 'const oven = 250 // °C, as hot as it goes', { language: 'js' }),
+      ],
     },
   ]
 
   return {
-    version: 1,
+    version: SCHEMA_VERSION,
     module: 'home',
     prefs: {
       theme: 'system',
@@ -156,6 +321,9 @@ export function createInitialState(): AppState {
     lists,
     reminders,
     tags,
+    properties: defaultProperties(),
+    views: defaultViews(),
+    activeViewId: 'view_list',
     reminderSelection: { kind: 'smart', id: 'today' },
     selectedReminderId: null,
     calendars,

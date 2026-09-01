@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
 import {
-  addFolder, addNote, deleteFolder, emptyTrash, noteTitleOf, setPrefs,
+  addFolder, addNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
   setSelectedFolder, setSelectedNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
@@ -189,12 +189,13 @@ export function NotesApp({
                 onClick={() => setSelectedNote(note.id)}
               >
                 <span className="note-card__title">
+                  <span className="note-card__icon">{note.icon ?? '📄'}</span>
+                  {noteTitle(note)}
                   {note.pinned && <Icon name="pin" size={11} filled />}
-                  {noteTitleOf(note.body)}
                 </span>
                 <span className="note-card__meta">
                   <span className="note-card__stamp">{relativeStamp(note.updatedAt)}</span>
-                  <span className="note-card__snippet">{noteSnippet(note.body)}</span>
+                  <span className="note-card__snippet">{noteSnippet(note)}</span>
                 </span>
               </button>
             </li>
@@ -212,11 +213,11 @@ export function NotesApp({
         <section className="editor">
           <EmptyState
             icon="note"
-            title="No Note Selected"
-            hint="Pick a note on the left, or press ⌘N to start a new one."
+            title="No page selected"
+            hint="Pick a page on the left, or press ⌘N to start a new one."
             action={
               <button type="button" className="btn btn--primary" onClick={() => addNote()}>
-                New Note
+                New page
               </button>
             }
           />

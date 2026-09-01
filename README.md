@@ -1,9 +1,10 @@
 # Cadence
 
-An all-in-one **Reminders**, **Calendar** and **Notes** app in a single window,
-borrowing the interaction model of Apple's three apps. Built for iPhone Safari
-first — installable to the Home screen — and equally at home on a desktop
-browser. Everything runs locally with no backend.
+An all-in-one **Tasks**, **Calendar** and **Notes** app in a single window,
+wearing Notion's clothes: a near-monochrome interface, a real block editor with
+slash commands, and tasks as a database you can view as a list, a board or a
+table. Built for iPhone Safari first — installable to the Home screen — and
+equally at home on a desktop browser. Everything runs locally with no backend.
 
 Opening the app lands on the **split Today view**: reminders in the top third,
 the day's calendar in the bottom two thirds, both aimed at the same day.
@@ -12,7 +13,7 @@ the day's calendar in the bottom two thirds, both aimed at the same day.
 npm install
 npm run dev            # http://localhost:5173
 npm run dev -- --host  # also serve on the LAN, to open it on a phone
-npm test               # date + recurrence unit tests
+npm test               # dates, recurrence, blocks, inline marks
 npm run build          # typecheck, then production build into dist/
 ```
 
@@ -41,22 +42,30 @@ absolute ones would resolve to the domain root and break the installed app.
 
 ### Shell
 - A vertical app rail switches between the apps (`⌘0` / `⌘1` / `⌘2` / `⌘3`); at
-  phone widths it becomes an iOS-style bottom tab bar.
+  phone widths it becomes a bottom tab bar.
 - **Quick Find** (`⌘K` or `/`) searches reminders, events and notes at once and
   jumps straight to the hit.
 - Light / dark / system themes, a system-tint accent picker, week-start,
   12- vs 24-hour time, all in Settings (`⌘,`).
 - State persists to `localStorage` and is restored on launch.
 
-### Reminders
-- Smart lists — Today, Scheduled, All, Flagged — with live counts, plus custom
-  lists with a color and symbol, and tags.
-- Per-reminder: notes, due date and time, alert, priority, flag, URL, tags and
-  subtasks.
-- Repeating reminders roll their due date forward when completed instead of
-  being struck out, the way Apple Reminders behaves.
-- Scheduled and Today group under date headings, with overdue called out.
-- "Schedule" turns a reminder into a calendar event in one click.
+### Tasks — a Notion database
+- **Three views over the same rows**: List (grouped, closest to a to-do list),
+  Board (kanban, drag cards between columns) and Table (a spreadsheet with one
+  column per property). Each view keeps its own grouping, sort and filters.
+- **Typed properties** you define yourself: select, multi-select, text, number,
+  checkbox, date and URL. Add a column from the table header; select options are
+  created inline as you type them. The ships-with set is Status, Effort, Area
+  and Estimate.
+- **Filter, sort and group** by any built-in field or property, from the toolbar
+  the way Notion does it.
+- Status and the completion checkbox are two views of one fact, so dragging a
+  card to Done ticks it, and ticking it moves the card.
+- Still a task list underneath: due date and time, alerts, priority, flags,
+  subtasks, tags, and smart lists (Today, Scheduled, All, Flagged).
+- Repeating tasks roll their due date forward when completed instead of being
+  struck out.
+- "Schedule" turns a task into a calendar event in one click.
 
 ### Calendar
 - Day, week, month and year views (`D` / `W` / `M` / `Y`), arrow keys to step,
@@ -70,13 +79,23 @@ absolute ones would resolve to the domain root and break the installed app.
 - Events carry location, notes, URL, alert and a repeat rule.
 - Reminders with due dates optionally overlay the calendar.
 
-### Notes
-- Folders, pinning, search, sort by edited / created / title, and a Recently
-  Deleted folder with recover and delete-forever.
-- A lightweight markup dialect (titles, headings, checklists, bulleted and
-  numbered lists, quotes, bold, italic, code) with a formatting bar, a rendered
-  view whose checkboxes are clickable, and automatic list continuation on Enter.
-- "Make a reminder from this note" pushes a thought into Reminders.
+### Notes — a block editor
+- Pages have an emoji icon and a large title, and a body made of **blocks**:
+  text, three heading levels, to-dos, bulleted, numbered and toggle lists,
+  quotes, callouts, dividers and code.
+- **`/` opens the insert menu**, filtered as you type, driven by the arrow keys.
+- **Markdown shortcuts convert as you type**: `# `, `## `, `- `, `1. `, `[] `,
+  `> `, ` ``` ` and `--- `.
+- **Drag the handle to reorder** — a block carries whatever is nested under it.
+  The handle also opens a menu to turn a block into another type, recolour a
+  callout, duplicate or delete it.
+- Keyboard model: Enter splits a block and continues lists, Backspace at the
+  start merges or lifts out, Tab and Shift-Tab indent, arrows move between
+  blocks, and `⌘B` / `⌘I` / `⌘E` mark the selection.
+- Toggles collapse the deeper blocks that follow them.
+- Folders, pinning, search, sort, and a Recently Deleted folder with restore and
+  delete-permanently.
+- "Create a reminder from this page" pushes a thought into Tasks.
 
 ## Keyboard
 
@@ -90,7 +109,9 @@ absolute ones would resolve to the domain root and break the installed app.
 | `←` `→` | Previous / next period (Calendar) |
 | `⇧⌘S` | Toggle the sidebar |
 | `⌘,` | Settings |
-| `⌘B` `⌘I` `⇧⌘L` | Bold / italic / checklist (Notes) |
+| `/` | Insert a block (in the editor) |
+| `⌘B` `⌘I` `⌘E` | Bold / italic / code on the selection |
+| `Tab` `⇧Tab` | Indent / outdent a block |
 
 ## On iPhone
 
@@ -115,16 +136,39 @@ src/
   types.ts               Shared data model for all four views
   lib/date.ts            ISO-day + HH:mm helpers and Intl formatting
   lib/recurrence.ts      Repeat rules: next occurrence, expansion over a range
+  lib/blocks.ts          Block model, slash-menu catalogue, markdown shortcuts
+  lib/inline.ts          Inline marks, rendered without changing textContent
+  lib/caret.ts           Caret offsets across contentEditable blocks
   lib/useMediaQuery.ts   Phone-width detection for layout that JS must know about
   state/store.ts         Tiny pub/sub store, localStorage persistence
-  state/seed.ts          First-run sample content
+  state/seed.ts          First-run content, default properties and views
+  state/migrate.ts       Schema upgrades for state saved by an older build
   state/actions.ts       Every mutation, including the cross-app ones
-  state/selectors.ts     Filtering, grouping, event layout, unified search
+  state/selectors.ts     The database engine plus event layout and search
   components/home/       The split Today view and its week strip
-  components/            App rail, tab bar, Quick Find, Settings + one folder per app
+  components/notes/      Block editor, slash menu, block menu
+  components/reminders/  List, board and table views, properties, view controls
   styles/                Design tokens, base, per-app sheets, then phone.css
-test/                    Unit tests for the date and recurrence logic
+test/                    Unit tests for dates, recurrence, blocks and inline marks
 ```
+
+### Two implementation notes
+
+**Blocks are stored flat, with an `indent` level**, rather than nested. It keeps
+reordering, indenting and keyboard handling simple, and a collapsed toggle is
+just "hide the deeper blocks that follow me".
+
+**Inline marks keep their markers in the text**, rendered dimmed beside the
+styled run. The editable element's `textContent` therefore always equals the
+stored string, so caret offsets stay meaningful and there is no parallel
+rich-text model to keep in sync.
+
+### Saved data
+
+The schema is versioned. State written by an older build is migrated on load
+rather than discarded — `state/migrate.ts` turns the previous markdown note
+bodies into blocks and gives every task the property bag — and the upgraded
+state is written straight back, so a migration runs once.
 
 Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get

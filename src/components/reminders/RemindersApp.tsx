@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
-import { groupByDate, selectionTint, selectionTitle, visibleReminders } from '../../state/selectors'
-import { addReminder, clearCompleted, setPrefs, setSelectedReminder } from '../../state/actions'
-import { friendlyDate, todayISO } from '../../lib/date'
+import { groupRows, selectionTitle, viewRows } from '../../state/selectors'
+import { addReminder, setActiveView, setSelectedReminder } from '../../state/actions'
+import { todayISO } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { RemindersSidebar } from './RemindersSidebar'
-import { ReminderRow } from './ReminderRow'
 import { ReminderDetail } from './ReminderDetail'
 import { ListSheet } from './ListSheet'
-import type { ReminderList } from '../../types'
+import { ListView } from './ListView'
+import { BoardView } from './BoardView'
+import { TableView } from './TableView'
+import { ViewControls } from './ViewControls'
+import type { ReminderList, ViewMode } from '../../types'
+
+const MODE_ICON: Record<ViewMode, string> = {
+  list: 'list',
+  board: 'grid',
+  table: 'checklist',
+  calendar: 'calendar',
+}
 
 export function RemindersApp({
   sidebarOpen,
@@ -23,21 +33,14 @@ export function RemindersApp({
   const isPhone = useIsPhone()
   const [query, setQuery] = useState('')
   const [sheet, setSheet] = useState<{ list?: ReminderList } | null>(null)
-  const [justAdded, setJustAdded] = useState<string | null>(null)
 
-  const sel = state.reminderSelection
-  const grouped = sel.kind === 'smart' && (sel.id === 'scheduled' || sel.id === 'today')
-
-  const items = useMemo(() => {
-    const all = visibleReminders(state)
-    const q = query.trim().toLowerCase()
-    return q ? all.filter((r) => `${r.title} ${r.notes ?? ''}`.toLowerCase().includes(q)) : all
-  }, [state, query])
-
+  const view = state.views.find((v) => v.id === state.activeViewId) ?? state.views[0]
+  const rows = useMemo(() => viewRows(state, view, query), [state, view, query])
+  const groups = useMemo(() => groupRows(state, view, rows), [state, view, rows])
   const selected = state.reminders.find((r) => r.id === state.selectedReminderId) ?? null
 
-  const targetList =
-    sel.kind === 'list' ? (sel.id as string) : (state.lists[0]?.id ?? 'list_inbox')
+  const sel = state.reminderSelection
+  const targetList = sel.kind === 'list' ? (sel.id as string) : (state.lists[0]?.id ?? 'list_inbox')
 
   function newReminder() {
     const created = addReminder({
@@ -47,7 +50,7 @@ export function RemindersApp({
       flagged: sel.kind === 'smart' && sel.id === 'flagged',
       tags: sel.kind === 'tag' ? [sel.id as string] : [],
     })
-    setJustAdded(created.id)
+    setSelectedReminder(created.id)
   }
 
   useEffect(() => {
@@ -61,7 +64,8 @@ export function RemindersApp({
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  const groups = grouped ? groupByDate(items) : [{ key: 'all', label: '', items }]
+  // A phone cannot show a table or a board usefully; keep it on the list.
+  const mode: ViewMode = isPhone && view.mode !== 'list' ? 'list' : view.mode
 
   return (
     <div className="module">
@@ -70,20 +74,14 @@ export function RemindersApp({
       )}
       <aside className="sidebar" hidden={!sidebarOpen} aria-label="Reminder lists">
         <div className="sidebar__head">
-          <span className="sidebar__title">Reminders</span>
+          <span className="sidebar__title">Tasks</span>
           {isPhone && (
             <button type="button" className="icon-btn icon-btn--lg" onClick={onToggleSidebar} aria-label="Close lists">
               <Icon name="close" size={17} />
             </button>
           )}
         </div>
-        <div
-          className="sidebar__body scroll"
-          onClick={() => {
-            // On a phone the drawer is modal, so choosing a list dismisses it.
-            if (isPhone) onToggleSidebar()
-          }}
-        >
+        <div className="sidebar__body scroll" onClick={() => isPhone && onToggleSidebar()}>
           <RemindersSidebar onNewList={() => setSheet({})} onEditList={(list) => setSheet({ list })} />
         </div>
       </aside>
@@ -91,8 +89,7 @@ export function RemindersApp({
       <section className="content">
         <header className="toolbar">
           <ToolButton icon="sidebar" label="Toggle sidebar" onClick={onToggleSidebar} active={sidebarOpen} />
-          <h1 className={`toolbar__title tint-${selectionTint(state)}`}>{selectionTitle(state)}</h1>
-          <span className="toolbar__sub">{items.filter((r) => !r.completed).length}</span>
+          <h1 className="toolbar__title">{selectionTitle(state)}</h1>
           <div className="toolbar__spacer" />
           <div className="search-field">
             <Icon name="search" size={14} />
@@ -100,62 +97,49 @@ export function RemindersApp({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search"
-              aria-label="Search reminders"
+              aria-label="Search tasks"
             />
           </div>
-          <ToolButton
-            icon="check"
-            label={state.prefs.showCompleted ? 'Hide completed' : 'Show completed'}
-            active={state.prefs.showCompleted}
-            onClick={() => setPrefs({ showCompleted: !state.prefs.showCompleted })}
-          />
-          <ToolButton
-            icon="trash"
-            label="Clear completed"
-            onClick={() => clearCompleted(sel.kind === 'list' ? (sel.id as string) : undefined)}
-          />
-          <ToolButton icon="plus" label="New reminder (⌘N)" onClick={newReminder} />
+          <button type="button" className="btn btn--primary" onClick={newReminder}>
+            <Icon name="plus" size={14} strokeWidth={2.4} /> New
+          </button>
         </header>
 
-        <div
-          className="rem-list scroll"
-          onClick={(e) => {
-            // Only clear the selection when the empty area itself is clicked.
-            if (e.target === e.currentTarget) setSelectedReminder(null)
-          }}
-        >
-          {items.length === 0 ? (
-            <EmptyState
-              icon="checklist"
-              title="No Reminders"
-              hint={query ? 'Nothing matches your search.' : 'Add one with the + button or ⌘N.'}
-            />
-          ) : (
-            groups.map((group) => (
-              <div key={group.key} className="rem-group">
-                {group.label && (
-                  <h2 className="rem-group__head">
-                    {group.label === 'Overdue' || group.label === 'No Date'
-                      ? group.label
-                      : friendlyDate(group.label)}
-                  </h2>
-                )}
-                <ul className="rem-group__items">
-                  {group.items.map((r) => (
-                    <ReminderRow
-                      key={r.id}
-                      reminder={r}
-                      selected={r.id === state.selectedReminderId}
-                      autoFocus={r.id === justAdded}
-                      showList={sel.kind !== 'list'}
-                      onSelect={() => setSelectedReminder(r.id)}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
+        <div className="viewtabs">
+          <div className="viewtabs__tabs" role="tablist" aria-label="Views">
+            {state.views.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                role="tab"
+                aria-selected={v.id === view.id}
+                className={`viewtab${v.id === view.id ? ' is-on' : ''}`}
+                onClick={() => setActiveView(v.id)}
+              >
+                <Icon name={MODE_ICON[v.mode]} size={13} />
+                {v.name}
+              </button>
+            ))}
+          </div>
+          <div className="toolbar__spacer" />
+          <ViewControls state={state} view={view} />
         </div>
+
+        {rows.length === 0 ? (
+          <EmptyState
+            icon="checklist"
+            title="No tasks"
+            hint={query ? 'Nothing matches your search.' : 'Press New, or ⌘N, to add one.'}
+          />
+        ) : mode === 'board' ? (
+          <BoardView state={state} view={view} groups={groups} />
+        ) : mode === 'table' ? (
+          <TableView state={state} view={view} groups={groups} selectedId={state.selectedReminderId} />
+        ) : (
+          <div className="db-scroll scroll">
+            <ListView state={state} view={view} groups={groups} selectedId={state.selectedReminderId} />
+          </div>
+        )}
       </section>
 
       {selected && (

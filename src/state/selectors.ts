@@ -1,9 +1,12 @@
 import type {
-  AppState, CalendarEvent, EventOccurrence, ID, Note, Reminder, ReminderSelection,
+  AppState, CalendarEvent, DatabaseView, EventOccurrence, FieldRef, ID, Note,
+  PropertyDef, Reminder, ReminderSelection, TintName,
 } from '../types'
 import { addDays, diffDays, friendlyDate, minutesFromTime, todayISO } from '../lib/date'
 import { occurrencesInRange } from '../lib/recurrence'
-import { noteTitleOf } from './actions'
+import { noteTitle } from './actions'
+import { blocksToText } from '../lib/blocks'
+
 
 /* ------------------------------------------------------------------ */
 /* Reminders                                                           */
@@ -192,24 +195,20 @@ export function visibleNotes(s: AppState, query = ''): Note[] {
   return s.notes
     .filter((n) => (inTrash ? !!n.trashedAt : !n.trashedAt))
     .filter((n) => inTrash || s.selectedFolderId === 'all' || n.folderId === s.selectedFolderId)
-    .filter((n) => !q || n.body.toLowerCase().includes(q))
+    .filter((n) => !q || `${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q))
     .sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-      if (s.prefs.notesSort === 'title') return noteTitleOf(a.body).localeCompare(noteTitleOf(b.body))
+      if (s.prefs.notesSort === 'title') return noteTitle(a).localeCompare(noteTitle(b))
       const key = s.prefs.notesSort === 'created' ? 'createdAt' : 'updatedAt'
       return a[key] < b[key] ? 1 : -1
     })
 }
 
-export function noteSnippet(body: string): string {
-  const lines = body.split('\n')
-  const firstIdx = lines.findIndex((l) => l.trim().length > 0)
-  const rest = lines
-    .slice(firstIdx + 1)
-    .map((l) => l.replace(/^#{1,3}\s*/, '').replace(/^[-*]\s+\[[ x]\]\s*/i, '').replace(/^[-*>]\s*/, ''))
-    .filter((l) => l.trim().length > 0)
-    .join(' ')
-  return rest.slice(0, 120) || 'No additional text'
+export function noteSnippet(note: Note): string {
+  const text = blocksToText(note.blocks).trim()
+  // When the title came from the first block, do not repeat it in the preview.
+  const withoutTitle = note.title.trim() ? text : text.slice(note.title.length)
+  return (withoutTitle || text).slice(0, 120) || 'No additional text'
 }
 
 /* ------------------------------------------------------------------ */
@@ -254,16 +253,190 @@ export function search(s: AppState, query: string, limit = 20): SearchHit[] {
   }
 
   for (const n of s.notes) {
-    if (n.trashedAt || !n.body.toLowerCase().includes(q)) continue
+    if (n.trashedAt || !`${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q)) continue
     const folder = s.folders.find((f) => f.id === n.folderId)
     hits.push({
       kind: 'note',
       id: n.id,
-      title: noteTitleOf(n.body),
-      subtitle: [folder?.name, noteSnippet(n.body).slice(0, 48)].filter(Boolean).join(' · '),
-      tint: folder?.tint ?? 'yellow',
+      title: noteTitle(n),
+      subtitle: [folder?.name, noteSnippet(n).slice(0, 48)].filter(Boolean).join(' · '),
+      tint: folder?.tint ?? 'gray',
     })
   }
 
   return hits.slice(0, limit)
 }
+
+/* ------------------------------------------------------------------ */
+/* Database engine: filter, sort, group                                */
+/* ------------------------------------------------------------------ */
+
+export const BUILTIN_FIELDS: { id: FieldRef; name: string }[] = [
+  { id: 'title', name: 'Name' },
+  { id: 'list', name: 'List' },
+  { id: 'due', name: 'Due' },
+  { id: 'priority', name: 'Priority' },
+  { id: 'status', name: 'Done' },
+  { id: 'created', name: 'Created' },
+]
+
+export function fieldName(s: AppState, field: FieldRef): string {
+  return (
+    BUILTIN_FIELDS.find((f) => f.id === field)?.name ??
+    s.properties.find((p) => p.id === field)?.name ??
+    'Field'
+  )
+}
+
+export function propertyOf(s: AppState, field: FieldRef): PropertyDef | undefined {
+  return s.properties.find((p) => p.id === field)
+}
+
+/** A comparable, displayable reading of one field on one reminder. */
+export function fieldValue(s: AppState, reminder: Reminder, field: FieldRef): string {
+  switch (field) {
+    case 'title': return reminder.title
+    case 'list': return s.lists.find((l) => l.id === reminder.listId)?.name ?? ''
+    case 'due': return reminder.dueDate ?? ''
+    case 'priority': return String(reminder.priority)
+    case 'status': return reminder.completed ? 'Done' : 'Not done'
+    case 'created': return reminder.createdAt
+    default: {
+      const property = propertyOf(s, field)
+      const raw = reminder.props[field]
+      if (raw == null || raw === '') return ''
+      if (property?.type === 'multiSelect') {
+        const ids = Array.isArray(raw) ? raw : []
+        return ids
+          .map((id) => property.options?.find((o) => o.id === id)?.name ?? '')
+          .filter(Boolean)
+          .join(', ')
+      }
+      if (property?.type === 'select') {
+        return property.options?.find((o) => o.id === raw)?.name ?? ''
+      }
+      return String(raw)
+    }
+  }
+}
+
+function matchesFilter(s: AppState, reminder: Reminder, filter: DatabaseView['filters'][number]): boolean {
+  const value = fieldValue(s, reminder, filter.field).toLowerCase()
+  const target = (filter.value ?? '').toLowerCase()
+  switch (filter.op) {
+    case 'is': return value === target
+    case 'isNot': return value !== target
+    case 'contains': return value.includes(target)
+    case 'isEmpty': return value === ''
+    case 'isNotEmpty': return value !== ''
+    case 'before': return !!value && value < target
+    case 'after': return !!value && value > target
+    default: return true
+  }
+}
+
+/** Rows for a view: selection, then its filters, then its sort. */
+export function viewRows(s: AppState, view: DatabaseView, query = ''): Reminder[] {
+  const today = todayISO()
+  const q = query.trim().toLowerCase()
+
+  return s.reminders
+    .filter((r) => matchesSelection(r, s.reminderSelection, today))
+    .filter((r) => !view.hideCompleted || !r.completed)
+    .filter((r) => view.filters.every((f) => matchesFilter(s, r, f)))
+    .filter((r) => !q || `${r.title} ${r.notes ?? ''}`.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const dir = view.sortDir === 'desc' ? -1 : 1
+      if (view.sortBy === 'due') return dir * compareReminders(a, b)
+      if (view.sortBy === 'priority') return dir * (b.priority - a.priority)
+      const av = fieldValue(s, a, view.sortBy)
+      const bv = fieldValue(s, b, view.sortBy)
+      // Empty values sort last regardless of direction, as they do in Notion.
+      if (!av !== !bv) return av ? -1 : 1
+      return dir * av.localeCompare(bv, undefined, { numeric: true })
+    })
+}
+
+export interface Group {
+  key: string | null
+  name: string
+  tint?: TintName
+  items: Reminder[]
+}
+
+/** Split rows into the columns or sections a view's `groupBy` calls for. */
+export function groupRows(s: AppState, view: DatabaseView, rows: Reminder[]): Group[] {
+  const field = view.groupBy
+  if (!field) return [{ key: null, name: 'All', items: rows }]
+
+  if (field === 'due') {
+    return groupByDate(rows).map((g) => ({
+      key: g.key,
+      name: g.label === 'Overdue' || g.label === 'No Date' ? g.label : friendlyDate(g.label),
+      tint: g.key === 'overdue' ? ('red' as TintName) : undefined,
+      items: g.items,
+    }))
+  }
+
+  if (field === 'list') {
+    const groups: Group[] = s.lists.map((l) => ({
+      key: l.id,
+      name: l.name,
+      tint: l.tint,
+      items: rows.filter((r) => r.listId === l.id),
+    }))
+    return groups.filter((g) => g.items.length || view.mode === 'board')
+  }
+
+  if (field === 'priority') {
+    const names = ['None', 'Low', 'Medium', 'High']
+    const tints: TintName[] = ['gray', 'blue', 'yellow', 'red']
+    return [3, 2, 1, 0].map((p) => ({
+      key: String(p),
+      name: names[p],
+      tint: tints[p],
+      items: rows.filter((r) => r.priority === p),
+    }))
+  }
+
+  if (field === 'status') {
+    return [
+      { key: 'todo', name: 'Not done', tint: 'gray' as TintName, items: rows.filter((r) => !r.completed) },
+      { key: 'done', name: 'Done', tint: 'green' as TintName, items: rows.filter((r) => r.completed) },
+    ]
+  }
+
+  const property = propertyOf(s, field)
+  if (!property) return [{ key: null, name: 'All', items: rows }]
+
+  const groups: Group[] = (property.options ?? []).map((option) => ({
+    key: option.id,
+    name: option.name,
+    tint: option.tint,
+    items: rows.filter((r) => {
+      const raw = r.props[property.id]
+      return Array.isArray(raw) ? raw.includes(option.id) : raw === option.id
+    }),
+  }))
+
+  const ungrouped = rows.filter((r) => {
+    const raw = r.props[property.id]
+    return Array.isArray(raw) ? raw.length === 0 : raw == null || raw === ''
+  })
+  if (ungrouped.length || view.mode === 'board') {
+    groups.push({ key: null, name: 'No ' + property.name, tint: 'gray', items: ungrouped })
+  }
+  return groups
+}
+
+/** The option a select-ish value refers to, for rendering a tag. */
+export function optionsFor(property: PropertyDef, value: PropertyValueLike): PropertyOptionLike[] {
+  if (!property.options) return []
+  const ids = Array.isArray(value) ? value : value == null || value === '' ? [] : [value]
+  return ids
+    .map((id) => property.options?.find((o) => o.id === id))
+    .filter((o): o is PropertyOptionLike => !!o)
+}
+
+type PropertyValueLike = string | number | boolean | ID[] | null | undefined
+type PropertyOptionLike = { id: ID; name: string; tint: TintName }

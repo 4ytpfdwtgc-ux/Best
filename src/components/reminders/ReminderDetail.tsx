@@ -8,6 +8,7 @@ import {
 import { addDays, todayISO } from '../../lib/date'
 import { Icon } from '../ui/Icon'
 import { RecurrenceEditor } from '../ui/RecurrenceEditor'
+import { PropertyCell } from './Property'
 import { Row, Switch } from '../ui/primitives'
 
 const ALERT_OPTIONS = [
@@ -154,6 +155,16 @@ export function ReminderDetail({
             aria-label="URL"
           />
         </Row>
+      </section>
+
+      <section className="detail__group">
+        <h3 className="detail__heading">Properties</h3>
+        {state.properties.map((property) => (
+          <div key={property.id} className="detail__prop">
+            <span className="detail__propname">{property.name}</span>
+            <PropertyCell reminder={reminder} property={property} />
+          </div>
+        ))}
       </section>
 
       <section className="detail__group">

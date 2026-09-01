@@ -23,7 +23,7 @@
 }
 .mini__day:hover { background: var(--bg-hover); }
 .mini__day.is-muted { color: var(--text-tertiary); }
-.mini__day.is-today { color: var(--tint-red); font-weight: 700; }
+.mini__day.is-today { color: var(--accent-text); font-weight: 600; }
 .mini__day.is-selected { background: var(--accent); color: var(--text-on-accent); font-weight: 600; }
 .mini__day.is-selected.is-today { color: var(--text-on-accent); }
 .mini__dot {
@@ -60,10 +60,8 @@
 .month__weekdays span {
   padding: 6px 8px;
   text-align: right;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-tertiary);
 }
 .month__grid {
@@ -99,7 +97,7 @@
   border-radius: 999px;
   color: var(--text-secondary);
 }
-.month__cell.is-today .month__date { background: var(--tint-red); color: #fff; font-weight: 700; }
+.month__cell.is-today .month__date { background: var(--accent); color: var(--text-on-accent); font-weight: 500; }
 .month__chips { display: flex; flex-direction: column; gap: 1px; min-height: 0; overflow: hidden; }
 .month__more { font-size: 10.5px; color: var(--text-tertiary); padding-left: 4px; }
 
@@ -161,7 +159,7 @@
   display: grid;
   place-items: center;
 }
-.tg__dayhead.is-today .tg__daynum { background: var(--tint-red); color: #fff; }
+.tg__dayhead.is-today .tg__daynum { background: var(--accent); color: var(--text-on-accent); }
 .tg__dayhead.is-selected .tg__dayname { color: var(--accent); }
 
 .tg__allday {
@@ -266,7 +264,7 @@
   padding: 18px;
   align-content: start;
 }
-.year__title { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--tint-red); }
+.year__title { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--text); }
 .year__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
 .year__weekday { font-size: 9.5px; text-align: center; color: var(--text-tertiary); font-weight: 600; }
 .year__day {
@@ -280,7 +278,7 @@
 .year__day:hover { background: var(--bg-hover); }
 .year__day.is-muted { visibility: hidden; }
 .year__day.is-busy { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.year__day.is-today { background: var(--tint-red); color: #fff; font-weight: 700; }
+.year__day.is-today { background: var(--accent); color: var(--text-on-accent); font-weight: 500; }
 
 /* Event sheet ------------------------------------------------------ */
 

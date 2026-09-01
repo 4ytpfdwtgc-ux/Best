@@ -106,7 +106,7 @@ export function HomeApp({
               setModule('reminders')
             }}
           >
-            Reminders
+            Tasks
             <span className="home__count">{reminders.length}</span>
             <Icon name="chevronRight" size={13} strokeWidth={2.4} />
           </button>

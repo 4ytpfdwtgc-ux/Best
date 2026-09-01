@@ -44,7 +44,11 @@ export default function App() {
   }, [state.prefs.theme])
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent', `var(--tint-${state.prefs.accent})`)
+    // Blue is the stylesheet default (Notion's interactive blue), so only a
+    // deliberately different choice overrides it.
+    const root = document.documentElement
+    if (state.prefs.accent === 'blue') root.style.removeProperty('--accent')
+    else root.style.setProperty('--accent', `var(--tint-${state.prefs.accent})`)
   }, [state.prefs.accent])
 
   /* On a phone the sidebar is an overlay, so it starts closed. */

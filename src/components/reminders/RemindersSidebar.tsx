@@ -7,7 +7,7 @@ import type { ReminderList, SmartListId } from '../../types'
 const SMART: { id: SmartListId; label: string; icon: string; tint: string }[] = [
   { id: 'today', label: 'Today', icon: 'today', tint: 'blue' },
   { id: 'scheduled', label: 'Scheduled', icon: 'calendar', tint: 'red' },
-  { id: 'all', label: 'All', icon: 'inbox', tint: 'gray' },
+  { id: 'all', label: 'All tasks', icon: 'inbox', tint: 'gray' },
   { id: 'flagged', label: 'Flagged', icon: 'flag', tint: 'orange' },
 ]
 
@@ -23,27 +23,26 @@ export function RemindersSidebar({
 
   return (
     <>
-      <div className="smart-grid">
-        {SMART.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`smart-card tint-${s.tint}${sel.kind === 'smart' && sel.id === s.id ? ' is-on' : ''}`}
-            onClick={() => setReminderSelection({ kind: 'smart', id: s.id })}
-            aria-current={sel.kind === 'smart' && sel.id === s.id}
-          >
-            <span className="smart-card__top">
-              <span className="smart-card__icon">
-                <Icon name={s.icon} size={13} strokeWidth={2} />
+      <ul className="side-list">
+        {SMART.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              className={`side-item tint-${item.tint}${sel.kind === 'smart' && sel.id === item.id ? ' is-on' : ''}`}
+              onClick={() => setReminderSelection({ kind: 'smart', id: item.id })}
+              aria-current={sel.kind === 'smart' && sel.id === item.id}
+            >
+              <span className="side-item__glyph side-item__glyph--plain">
+                <Icon name={item.icon} size={15} />
               </span>
-              <span className="smart-card__count">{countForSmartList(state, s.id)}</span>
-            </span>
-            <span className="smart-card__label">{s.label}</span>
-          </button>
+              <span className="side-item__name">{item.label}</span>
+              <span className="side-item__count">{countForSmartList(state, item.id)}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
 
-      <div className="sidebar__section">My Lists</div>
+      <div className="sidebar__section">Lists</div>
       <ul className="side-list">
         {state.lists.map((list) => (
           <li key={list.id}>

@@ -63,6 +63,8 @@ export interface Reminder {
   updatedAt: string
   /** Manual ordering within a list. */
   sortIndex: number
+  /** Values for the user-defined properties, keyed by `PropertyDef.id`. */
+  props: Record<ID, PropertyValue>
 }
 
 export interface ReminderList {
@@ -79,6 +81,68 @@ export interface Tag {
   id: ID
   name: string
   tint: TintName
+}
+
+/* ------------------------------------------------------------------ */
+/* Database properties and views                                       */
+/* ------------------------------------------------------------------ */
+
+export type PropertyType = 'select' | 'multiSelect' | 'text' | 'number' | 'checkbox' | 'date' | 'url'
+
+export interface PropertyOption {
+  id: ID
+  name: string
+  tint: TintName
+}
+
+/** A user-defined column on the reminder database. */
+export interface PropertyDef {
+  id: ID
+  name: string
+  type: PropertyType
+  /** `select` and `multiSelect` only. */
+  options?: PropertyOption[]
+}
+
+export type PropertyValue = string | number | boolean | ID[] | null
+
+export type ViewMode = 'list' | 'board' | 'table' | 'calendar'
+
+/**
+ * Fields a view can group, sort or filter by. Built-in fields use a reserved
+ * name; anything else is a `PropertyDef` id.
+ */
+export type FieldRef = 'list' | 'priority' | 'status' | 'due' | 'title' | 'created' | ID
+
+export type FilterOp =
+  | 'is'
+  | 'isNot'
+  | 'contains'
+  | 'isEmpty'
+  | 'isNotEmpty'
+  | 'before'
+  | 'after'
+
+export interface Filter {
+  id: ID
+  field: FieldRef
+  op: FilterOp
+  value?: string
+}
+
+export interface DatabaseView {
+  id: ID
+  name: string
+  mode: ViewMode
+  /** `null` shows one ungrouped run of rows. */
+  groupBy: FieldRef | null
+  sortBy: FieldRef
+  sortDir: 'asc' | 'desc'
+  filters: Filter[]
+  /** Property columns shown in the table view, in order. */
+  visibleProps: ID[]
+  /** Hide completed reminders in this view. */
+  hideCompleted: boolean
 }
 
 /* ------------------------------------------------------------------ */
@@ -139,11 +203,51 @@ export interface Folder {
   sortIndex: number
 }
 
+/** The block types the editor can create, in slash-menu order. */
+export type BlockType =
+  | 'text'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'todo'
+  | 'bullet'
+  | 'numbered'
+  | 'toggle'
+  | 'quote'
+  | 'callout'
+  | 'divider'
+  | 'code'
+
+/**
+ * A block of note content. Blocks are stored flat with an `indent` level
+ * rather than nested: it keeps reordering, indenting and keyboard handling
+ * simple, and a toggle simply hides the deeper blocks that follow it.
+ */
+export interface Block {
+  id: ID
+  type: BlockType
+  text: string
+  /** Nesting depth, 0 at the top level. */
+  indent: number
+  /** `todo` only. */
+  checked?: boolean
+  /** `toggle` only: hides the deeper blocks beneath it. */
+  collapsed?: boolean
+  /** `callout` background, and the emoji it leads with. */
+  tint?: TintName
+  icon?: string
+  /** `code` only. */
+  language?: string
+}
+
 export interface Note {
   id: ID
   folderId: ID
-  /** Plain text with lightweight markup; first line is the title. */
-  body: string
+  /** The page title, shown large at the top and used in lists. */
+  title: string
+  /** Page emoji, as in Notion. */
+  icon?: string
+  blocks: Block[]
   pinned: boolean
   locked: boolean
   tags: ID[]
@@ -188,6 +292,9 @@ export interface AppState {
   lists: ReminderList[]
   reminders: Reminder[]
   tags: Tag[]
+  properties: PropertyDef[]
+  views: DatabaseView[]
+  activeViewId: ID
   reminderSelection: ReminderSelection
   selectedReminderId: ID | null
 

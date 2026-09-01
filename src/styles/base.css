@@ -13,10 +13,10 @@ body,
 body {
   margin: 0;
   font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text);
-  background: var(--bg-panel);
+  background: var(--bg-window);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior: none;
@@ -48,11 +48,11 @@ textarea {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  background: rgba(35, 131, 226, 0.28);
 }
 
 /* Thin, self-hiding scrollbars in the style of macOS overlay bars. */
@@ -79,19 +79,19 @@ textarea {
   background-clip: content-box;
 }
 
-.tint-red { --tint: var(--tint-red); }
-.tint-orange { --tint: var(--tint-orange); }
-.tint-yellow { --tint: var(--tint-yellow); }
-.tint-green { --tint: var(--tint-green); }
-.tint-mint { --tint: var(--tint-mint); }
-.tint-teal { --tint: var(--tint-teal); }
-.tint-cyan { --tint: var(--tint-cyan); }
-.tint-blue { --tint: var(--tint-blue); }
-.tint-indigo { --tint: var(--tint-indigo); }
-.tint-purple { --tint: var(--tint-purple); }
-.tint-pink { --tint: var(--tint-pink); }
-.tint-brown { --tint: var(--tint-brown); }
-.tint-gray { --tint: var(--tint-gray); }
+.tint-red { --tint: var(--tint-red); --tint-bg: var(--tint-bg-red); }
+.tint-orange { --tint: var(--tint-orange); --tint-bg: var(--tint-bg-orange); }
+.tint-yellow { --tint: var(--tint-yellow); --tint-bg: var(--tint-bg-yellow); }
+.tint-green { --tint: var(--tint-green); --tint-bg: var(--tint-bg-green); }
+.tint-mint { --tint: var(--tint-mint); --tint-bg: var(--tint-bg-mint); }
+.tint-teal { --tint: var(--tint-teal); --tint-bg: var(--tint-bg-teal); }
+.tint-cyan { --tint: var(--tint-cyan); --tint-bg: var(--tint-bg-cyan); }
+.tint-blue { --tint: var(--tint-blue); --tint-bg: var(--tint-bg-blue); }
+.tint-indigo { --tint: var(--tint-indigo); --tint-bg: var(--tint-bg-indigo); }
+.tint-purple { --tint: var(--tint-purple); --tint-bg: var(--tint-bg-purple); }
+.tint-pink { --tint: var(--tint-pink); --tint-bg: var(--tint-bg-pink); }
+.tint-brown { --tint: var(--tint-brown); --tint-bg: var(--tint-bg-brown); }
+.tint-gray { --tint: var(--tint-gray); --tint-bg: var(--tint-bg-gray); }
 
 .sr-only {
   position: absolute;

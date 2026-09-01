@@ -1,36 +1,32 @@
 import { useSyncExternalStore } from 'react'
 import type { AppState } from '../types'
-import { createInitialState } from './seed'
+import { createInitialState, SCHEMA_VERSION } from './seed'
+import { migrate } from './migrate'
 
 const STORAGE_KEY = 'cadence.state.v1'
-const SCHEMA_VERSION = 1
 
 type Listener = () => void
 
-/** True when this session started from sample data rather than saved state. */
-let seeded = false
+/**
+ * True when the loaded state still has to be written back: either it came from
+ * sample data, or it was migrated from an older schema and the save on disk is
+ * still the old shape.
+ */
+let needsWrite = false
 
 function load(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) {
-      seeded = true
+      needsWrite = true
       return createInitialState()
     }
+    // Bring older saves forward rather than discarding them on a schema bump.
     const parsed = JSON.parse(raw) as Partial<AppState>
-    if (parsed.version !== SCHEMA_VERSION) return createInitialState()
-    // Merge over defaults so state written by an older build still boots.
-    const base = createInitialState()
-    return {
-      ...base,
-      ...parsed,
-      // The split Home view is the front door: a launch always lands there
-      // rather than resuming whichever tab happened to be open last.
-      module: 'home',
-      prefs: { ...base.prefs, ...(parsed.prefs ?? {}) },
-    } as AppState
+    needsWrite = parsed.version !== SCHEMA_VERSION
+    return migrate(parsed)
   } catch {
-    seeded = true
+    needsWrite = true
     return createInitialState()
   }
 }
@@ -51,8 +47,9 @@ function persist() {
   }, 150)
 }
 
-// Write the sample data out straight away so ids stay stable across reloads.
-if (seeded) persist()
+// Write straight away so sample ids stay stable and a migration is not redone
+// on every launch.
+if (needsWrite) persist()
 
 export function getState(): AppState {
   return state
