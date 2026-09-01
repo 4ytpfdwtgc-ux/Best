@@ -13,7 +13,7 @@ the day's calendar in the bottom two thirds, both aimed at the same day.
 npm install
 npm run dev            # http://localhost:5173
 npm run dev -- --host  # also serve on the LAN, to open it on a phone
-npm test               # dates, recurrence, blocks, inline marks
+npm test               # dates, recurrence, blocks, marks, ics, capture
 npm run build          # typecheck, then production build into dist/
 ```
 
@@ -113,6 +113,44 @@ absolute ones would resolve to the domain root and break the installed app.
 | `⌘B` `⌘I` `⌘E` | Bold / italic / code on the selection |
 | `Tab` `⇧Tab` | Indent / outdent a block |
 
+## Getting things in and out of iOS
+
+The app is a web app, so it cannot read or write iOS Calendar directly —
+EventKit has no web API, and Siri intents are native-only. These two bridges are
+what iOS actually leaves open to a web app, and both work with no backend.
+
+**Events → iOS Calendar.** Every event editor has *Add to Calendar*, and
+Settings exports the lot at once. Both produce an RFC 5545 `.ics`; on iPhone the
+share sheet opens so the file can go straight to Calendar, and elsewhere it
+downloads. Times are written as *floating* local values — no `Z`, no `TZID` —
+which matches what the app stores (a wall-clock time with no zone) and avoids
+shipping a VTIMEZONE block. Recurrence becomes an `RRULE`, alerts become a
+`VALARM`, and all-day events use `DATE` values with the exclusive end date the
+spec requires. This is one-way and you confirm each import; live two-way sync
+would need a backend or a native app.
+
+**“Hey Siri” capture → tasks and pages.** The app accepts work in the query
+string:
+
+```
+?add=buy oat milk tomorrow at 5pm
+?note=redesign thoughts. try a lighter grid.
+```
+
+In Shortcuts, chain *Dictate Text* → *URL* → *Open URLs* and name it
+“Add to Cadence”; then say **“Hey Siri, Add to Cadence.”** Settings shows the
+exact address for this deployment with a copy button. The catch is that opening
+a URL foregrounds the browser, so it is not the silent capture Apple's own apps
+get.
+
+Dictated text is parsed for a date, a time, `#tags` and priority, and the rest
+becomes the title. It understands today / tomorrow / tonight / next week,
+weekday names, `in 3 days`, `September 17`, `12/15`, `at 5pm`, `at 17:00`, noon
+and midnight. A bare hour is read as afternoon for 1–7 and morning for 8–11,
+which is how people speak. Anything it does not recognise is left in the title
+rather than silently dropped, and the URL is cleared once consumed so a refresh
+cannot add the same thing twice.
+
 ## On iPhone
 
 - Add to Home Screen runs it standalone, with no Safari chrome
@@ -137,19 +175,24 @@ src/
   lib/date.ts            ISO-day + HH:mm helpers and Intl formatting
   lib/recurrence.ts      Repeat rules: next occurrence, expansion over a range
   lib/blocks.ts          Block model, slash-menu catalogue, markdown shortcuts
+  lib/ics.ts             RFC 5545 output: escaping, folding, RRULE, VALARM
+  lib/capture.ts         Dictated phrase to a task: date, time, tags, priority
+  lib/deliver.ts         Share sheet on iOS, download everywhere else
   lib/inline.ts          Inline marks, rendered without changing textContent
   lib/caret.ts           Caret offsets across contentEditable blocks
   lib/useMediaQuery.ts   Phone-width detection for layout that JS must know about
   state/store.ts         Tiny pub/sub store, localStorage persistence
   state/seed.ts          First-run content, default properties and views
   state/migrate.ts       Schema upgrades for state saved by an older build
+  state/capture.ts       Consumes ?add= / ?note= handed over by a shortcut
   state/actions.ts       Every mutation, including the cross-app ones
   state/selectors.ts     The database engine plus event layout and search
   components/home/       The split Today view and its week strip
   components/notes/      Block editor, slash menu, block menu
   components/reminders/  List, board and table views, properties, view controls
   styles/                Design tokens, base, per-app sheets, then phone.css
-test/                    Unit tests for dates, recurrence, blocks and inline marks
+test/                    Unit tests: dates, recurrence, blocks, inline marks,
+                         iCalendar output and the capture parser
 ```
 
 ### Two implementation notes
@@ -178,3 +221,8 @@ from serializing `Date` objects.
 
 Sync, notifications that actually fire, shared lists, location-based alerts,
 attachments, drag-to-reschedule, swipe gestures, and undo.
+
+Two-way calendar sync and real Siri intents are not on this list because they
+are not reachable from a web app at all: both need either a server (a subscribed
+`webcal://` feed, or CalDAV against iCloud) or a native wrapper around this UI
+with EventKit and App Intents.

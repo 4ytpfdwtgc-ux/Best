@@ -4,6 +4,9 @@ import { useApp } from '../../state/store'
 import { addEvent, deleteEvent, updateEvent } from '../../state/actions'
 import { Field, Sheet } from '../ui/primitives'
 import { RecurrenceEditor } from '../ui/RecurrenceEditor'
+import { Icon } from '../ui/Icon'
+import { buildICS, icsFilename } from '../../lib/ics'
+import { shareOrDownload } from '../../lib/deliver'
 
 const ALERTS = [
   { value: '', label: 'None' },
@@ -78,6 +81,18 @@ export function EventSheet({ draft, onClose }: { draft: EventDraft; onClose: () 
               }}
             >
               Delete
+            </button>
+          )}
+          {existing && (
+            <button
+              type="button"
+              className="btn"
+              title="Send this event to the system calendar"
+              onClick={() => {
+                void shareOrDownload(icsFilename(existing.title), buildICS([existing]))
+              }}
+            >
+              <Icon name="calendar" size={14} /> Add to Calendar
             </button>
           )}
           <button type="button" className="btn" onClick={onClose}>Cancel</button>

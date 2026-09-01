@@ -255,6 +255,8 @@ body {
   .finder { width: 100%; border-radius: var(--radius-lg); }
   .finder__results { max-height: 60vh; max-height: 60dvh; }
 
+  .toast { bottom: calc(70px + env(safe-area-inset-bottom)); }
+
   /* Home split: tighter chrome so the thirds stay honest. */
   .home__title { font-size: 22px; }
   .home__bar { padding: 8px 10px 4px; padding-top: max(8px, env(safe-area-inset-top)); }

@@ -283,3 +283,46 @@
 @media (max-width: 680px) {
   .sidebar { position: absolute; z-index: 20; height: 100%; box-shadow: var(--shadow-pop); }
 }
+
+.settings__sub {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.settings__note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.settings__note em { font-style: normal; color: var(--text); }
+.settings__copy { display: flex; align-items: center; gap: 8px; }
+.settings__copylabel {
+  width: 44px;
+  flex: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.settings__copy .input { font-family: var(--font-mono); font-size: 12px; }
+
+/* Capture confirmation ---------------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 80;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--text);
+  color: var(--bg-window);
+  font-size: 14px;
+  box-shadow: var(--shadow-pop);
+  cursor: default;
+  animation: toast-in 0.18s var(--ease);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+}

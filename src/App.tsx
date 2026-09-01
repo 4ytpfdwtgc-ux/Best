@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useApp } from './state/store'
 import { setModule } from './state/actions'
 import { useIsPhone } from './lib/useMediaQuery'
+import { applyCapture } from './state/capture'
 import { AppRail } from './components/AppRail'
 import { TabBar } from './components/TabBar'
 import { QuickFind } from './components/QuickFind'
@@ -25,6 +26,24 @@ export default function App() {
   const [quickFind, setQuickFind] = useState(false)
   const [settings, setSettings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [toast, setToast] = useState<string | null>(null)
+
+  /*
+   * A shortcut hands work over in the query string. Consume it once, then
+   * clear it so a refresh cannot add the same thing twice.
+   */
+  useEffect(() => {
+    if (!window.location.search) return
+    const message = applyCapture(window.location.search)
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash)
+    if (message) setToast(message)
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const handle = window.setTimeout(() => setToast(null), 4000)
+    return () => window.clearTimeout(handle)
+  }, [toast])
 
   /* Apply theme + accent to the document root. */
   useEffect(() => {
@@ -117,6 +136,12 @@ export default function App() {
       </main>
 
       {isPhone && <TabBar module={state.module} onSelect={setModule} />}
+
+      {toast && (
+        <div className="toast" role="status" aria-live="polite" onClick={() => setToast(null)}>
+          {toast}
+        </div>
+      )}
 
       {quickFind && <QuickFind onClose={() => setQuickFind(false)} />}
       {settings && <SettingsSheet onClose={() => setSettings(false)} />}

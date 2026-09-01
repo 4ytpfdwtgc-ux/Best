@@ -1,10 +1,27 @@
+import { useState } from 'react'
 import { useApp, resetStore } from '../state/store'
 import { setPrefs } from '../state/actions'
+import { captureUrlTemplate } from '../state/capture'
+import { buildICS } from '../lib/ics'
+import { shareOrDownload } from '../lib/deliver'
 import { Row, Sheet, Switch, TintPicker } from './ui/primitives'
+import { Icon } from './ui/Icon'
 import type { ThemeSetting } from '../types'
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
-  const { prefs } = useApp()
+  const state = useApp()
+  const { prefs } = state
+  const [copied, setCopied] = useState<string | null>(null)
+
+  async function copy(text: string, key: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(key)
+      window.setTimeout(() => setCopied(null), 1500)
+    } catch {
+      // Clipboard access can be refused; the field is selectable either way.
+    }
+  }
 
   return (
     <Sheet
@@ -103,9 +120,51 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       </section>
 
       <section className="settings__group">
+        <h3 className="settings__heading">iOS</h3>
+
+        <Row label="Send events to the system calendar">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void shareOrDownload('cadence.ics', buildICS(state.events))}
+          >
+            <Icon name="calendar" size={14} /> Export all ({state.events.length})
+          </button>
+        </Row>
+        <p className="settings__note">
+          Opens the share sheet on iPhone, so the file can go straight to Calendar. A single event
+          can also be sent from its own editor.
+        </p>
+
+        <h4 className="settings__sub">“Hey Siri” capture</h4>
+        <p className="settings__note">
+          In Shortcuts, make a shortcut named <strong>Add to Cadence</strong>:{' '}
+          <em>Dictate Text</em> → <em>URL</em> (the address below with the dictated text appended) →{' '}
+          <em>Open URLs</em>. Then say “Hey Siri, Add to Cadence”. Spoken dates and times are
+          understood — “buy oat milk tomorrow at 5pm”.
+        </p>
+
+        {(['add', 'note'] as const).map((kind) => (
+          <div key={kind} className="settings__copy">
+            <span className="settings__copylabel">{kind === 'add' ? 'Task' : 'Page'}</span>
+            <input
+              className="input"
+              readOnly
+              value={captureUrlTemplate(kind)}
+              onFocus={(e) => e.currentTarget.select()}
+              aria-label={`${kind === 'add' ? 'Task' : 'Page'} capture address`}
+            />
+            <button type="button" className="btn" onClick={() => void copy(captureUrlTemplate(kind), kind)}>
+              {copied === kind ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        ))}
+      </section>
+
+      <section className="settings__group">
         <h3 className="settings__heading">Keyboard</h3>
         <ul className="shortcuts">
-          <li><kbd className="kbd">⌘1</kbd> <kbd className="kbd">⌘2</kbd> <kbd className="kbd">⌘3</kbd><span>Switch apps</span></li>
+          <li><kbd className="kbd">⌘0</kbd> <kbd className="kbd">⌘1</kbd> <kbd className="kbd">⌘2</kbd> <kbd className="kbd">⌘3</kbd><span>Switch apps</span></li>
           <li><kbd className="kbd">⌘K</kbd><span>Quick Find</span></li>
           <li><kbd className="kbd">⌘N</kbd><span>New item in the current app</span></li>
           <li><kbd className="kbd">⌘T</kbd><span>Jump to today (Calendar)</span></li>
