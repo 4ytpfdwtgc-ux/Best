@@ -103,18 +103,20 @@ export function TableView({
             {group.items.map((reminder) => (
               <tr key={reminder.id} className={reminder.id === selectedId ? 'is-selected' : undefined}>
                 <td className="db-table__name">
-                  <button
-                    type="button"
-                    className={`db-row__check${reminder.completed ? ' is-on' : ''}`}
-                    onClick={() => toggleReminder(reminder.id)}
-                    aria-pressed={reminder.completed}
-                    aria-label={reminder.completed ? 'Mark as not done' : 'Mark as done'}
-                  >
-                    {reminder.completed ? <Icon name="check" size={11} strokeWidth={3} /> : null}
-                  </button>
-                  <button type="button" className="db-table__open" onClick={() => setSelectedReminder(reminder.id)}>
-                    {reminder.title || 'Untitled'}
-                  </button>
+                  <span className="db-table__namecell">
+                    <button
+                      type="button"
+                      className={`db-row__check${reminder.completed ? ' is-on' : ''}`}
+                      onClick={() => toggleReminder(reminder.id)}
+                      aria-pressed={reminder.completed}
+                      aria-label={reminder.completed ? 'Mark as not done' : 'Mark as done'}
+                    >
+                      {reminder.completed ? <Icon name="check" size={11} strokeWidth={3} /> : null}
+                    </button>
+                    <button type="button" className="db-table__open" onClick={() => setSelectedReminder(reminder.id)}>
+                      {reminder.title || 'Untitled'}
+                    </button>
+                  </span>
                 </td>
                 <td className="db-table__due">
                   {reminder.dueDate ? (

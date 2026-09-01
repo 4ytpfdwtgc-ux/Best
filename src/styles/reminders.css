@@ -370,12 +370,16 @@
 .db-table td:first-child { padding-left: 12px; }
 .db-table__name { min-width: 260px; }
 .db-table__due { min-width: 120px; }
-.db-table__name > * { vertical-align: middle; }
+.db-table__namecell { display: flex; align-items: center; gap: 8px; }
 .db-table__open {
-  margin-left: 8px;
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   color: var(--text);
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .db-table__open:hover { text-decoration: underline; }
 .db-table tr.is-selected td { background: var(--bg-block-select); }
