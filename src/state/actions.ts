@@ -4,6 +4,7 @@ import type {
   Reminder, ReminderList, ReminderSelection, Tag, TintName, CalendarViewMode,
 } from '../types'
 import { getState, setState } from './store'
+import { lingerReminder, releaseReminder } from './linger'
 import { uid } from '../lib/id'
 import { nowISO, todayISO } from '../lib/date'
 import { nextOccurrence } from '../lib/recurrence'
@@ -116,6 +117,7 @@ export function updateReminder(id: ID, patch: Partial<Reminder>) {
 }
 
 export function deleteReminder(id: ID) {
+  releaseReminder(id)
   setState((s) => ({
     reminders: s.reminders.filter((r) => r.id !== id),
     selectedReminderId: s.selectedReminderId === id ? null : s.selectedReminderId,
@@ -148,6 +150,9 @@ export function toggleReminder(id: ID) {
     completedAt: completed ? nowISO() : undefined,
     props: { ...reminder.props, [PROP.status]: completed ? STATUS.done : STATUS.todo },
   })
+  // Show the result before the row goes; tapping again inside the window undoes it.
+  if (completed) lingerReminder(id)
+  else releaseReminder(id)
 }
 
 /**
@@ -164,6 +169,12 @@ export function setProperty(reminderId: ID, propertyId: ID, value: PropertyValue
     patch.completedAt = done ? nowISO() : undefined
   }
   updateReminder(reminderId, patch)
+
+  // Status mirrors the checkbox, so it earns the same hold before the row goes.
+  if (patch.completed !== undefined && patch.completed !== reminder.completed) {
+    if (patch.completed) lingerReminder(reminderId)
+    else releaseReminder(reminderId)
+  }
 }
 
 /* ------------------------------------------------------------------ */

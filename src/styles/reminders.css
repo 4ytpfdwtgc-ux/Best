@@ -232,6 +232,9 @@
 .db-group__rows { list-style: none; margin: 0; padding: 0; }
 .db-group__empty { padding: 6px 8px; color: var(--text-tertiary); font-size: 13px; }
 
+/* The swipe wrapper carries the list semantics; .db-row is what slides. */
+.db-rowwrap { --swipe-bg: var(--bg-window); }
+
 .db-row {
   display: flex;
   align-items: center;
@@ -275,6 +278,11 @@
   white-space: nowrap;
 }
 .db-row.is-done .db-row__title { color: var(--text-tertiary); text-decoration: line-through; }
+/*
+ * Completed a moment ago. The row is struck through and dimmed so it reads as
+ * on its way out, then the list drops it.
+ */
+.db-row.is-leaving { opacity: 0.55; transition: opacity 0.4s var(--ease); }
 .db-row__priority { color: var(--tint-red); font-weight: 600; margin-right: 4px; }
 .db-row__meta {
   flex: 1;

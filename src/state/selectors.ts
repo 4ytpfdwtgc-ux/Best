@@ -51,19 +51,24 @@ function matchesSelection(r: Reminder, sel: ReminderSelection, today: string): b
 }
 
 /** Reminders for the current selection, ordered the way each view expects. */
-export function visibleReminders(s: AppState): Reminder[] {
+export function visibleReminders(s: AppState, lingering: ReadonlySet<ID> = new Set()): Reminder[] {
   const today = todayISO()
   const sel = s.reminderSelection
   const showCompleted = sel.kind === 'smart' && sel.id === 'completed' ? true : s.prefs.showCompleted
 
   return s.reminders
     .filter((r) => matchesSelection(r, sel, today))
-    .filter((r) => showCompleted || !r.completed)
-    .sort(compareReminders)
+    .filter((r) => showCompleted || !r.completed || lingering.has(r.id))
+    .sort((a, b) => compareReminders(a, b, lingering))
 }
 
-export function compareReminders(a: Reminder, b: Reminder): number {
-  if (a.completed !== b.completed) return a.completed ? 1 : -1
+export function compareReminders(a: Reminder, b: Reminder, lingering: ReadonlySet<ID> = new Set()): number {
+  // A reminder held on screen after being completed keeps its place until it
+  // goes; sinking it to the bottom first would make the row jump away from the
+  // finger that just ticked it.
+  const aDone = a.completed && !lingering.has(a.id)
+  const bDone = b.completed && !lingering.has(b.id)
+  if (aDone !== bDone) return aDone ? 1 : -1
   if (a.dueDate && b.dueDate) {
     if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1
     const at = minutesFromTime(a.dueTime, 24 * 60)
@@ -339,19 +344,30 @@ function matchesFilter(s: AppState, reminder: Reminder, filter: DatabaseView['fi
   }
 }
 
-/** Rows for a view: selection, then its filters, then its sort. */
-export function viewRows(s: AppState, view: DatabaseView, query = ''): Reminder[] {
+/**
+ * Rows for a view: selection, then its filters, then its sort.
+ *
+ * `lingering` names reminders that were just completed. They survive the
+ * hide-completed filter for a beat so the row can be seen crossed out before
+ * the list drops it.
+ */
+export function viewRows(
+  s: AppState,
+  view: DatabaseView,
+  query = '',
+  lingering: ReadonlySet<ID> = new Set(),
+): Reminder[] {
   const today = todayISO()
   const q = query.trim().toLowerCase()
 
   return s.reminders
     .filter((r) => matchesSelection(r, s.reminderSelection, today))
-    .filter((r) => !view.hideCompleted || !r.completed)
+    .filter((r) => !view.hideCompleted || !r.completed || lingering.has(r.id))
     .filter((r) => view.filters.every((f) => matchesFilter(s, r, f)))
     .filter((r) => !q || `${r.title} ${r.notes ?? ''}`.toLowerCase().includes(q))
     .sort((a, b) => {
       const dir = view.sortDir === 'desc' ? -1 : 1
-      if (view.sortBy === 'due') return dir * compareReminders(a, b)
+      if (view.sortBy === 'due') return dir * compareReminders(a, b, lingering)
       if (view.sortBy === 'priority') return dir * (b.priority - a.priority)
       const av = fieldValue(s, a, view.sortBy)
       const bv = fieldValue(s, b, view.sortBy)

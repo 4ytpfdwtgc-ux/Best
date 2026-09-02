@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TintName } from '../../types'
-import { Icon } from '../ui/Icon'
+import { Icon } from './Icon'
 
 export interface SwipeAction {
   label: string
   icon: string
   tint: TintName
   run: () => void
+  /**
+   * The row survives the action, so it springs back rather than sliding off.
+   * Completing a reminder does this: the row stays, struck through.
+   */
+  keepsRow?: boolean
 }
 
 /** Past this many pixels, letting go performs the action. */
@@ -74,6 +79,12 @@ export function SwipeRow({
       const action = current > 0 ? left : right
       if (Math.abs(current) >= COMMIT && action) {
         setSettling(true)
+        if (action.keepsRow) {
+          // Nothing is leaving, so land the change as the row comes back.
+          setOffset(0)
+          action.run()
+          return
+        }
         setOffset(current > 0 ? 1000 : -1000)
         // Fire on a timer rather than transitionend, which never arrives when
         // the viewer has reduced motion turned on.

@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
+import { useLingering } from '../../state/linger'
 import { compareReminders, occurrencesBetween } from '../../state/selectors'
 import {
-  addReminder, setCalendarDate, setCalendarView, setModule,
+  addReminder, deleteReminder, setCalendarDate, setCalendarView, setModule,
   setReminderSelection, setSelectedEvent, setSelectedReminder, toggleReminder,
 } from '../../state/actions'
 import {
   addDays, formatLongDate, formatTime, friendlyDate, startOfWeek, timeFromMinutes, todayISO,
 } from '../../lib/date'
 import { Icon } from '../ui/Icon'
+import { SwipeRow } from '../ui/SwipeRow'
 import { TimeGrid } from '../calendar/TimeGrid'
 import { EventSheet, type EventDraft } from '../calendar/EventSheet'
 import { WeekStrip } from './WeekStrip'
@@ -31,13 +33,17 @@ export function HomeApp({
   const date = state.calendarDate
   const isToday = date === today
 
+  // A reminder completed a moment ago stays put, struck through, before it goes.
+  const lingering = useLingering()
+
   // On today the pane also carries overdue work; on any other day, just that day.
   const reminders = useMemo(
     () =>
       state.reminders
-        .filter((r) => !r.completed && r.dueDate && (isToday ? r.dueDate <= date : r.dueDate === date))
-        .sort(compareReminders),
-    [state.reminders, date, isToday],
+        .filter((r) => (!r.completed || lingering.has(r.id)) && r.dueDate)
+        .filter((r) => (isToday ? r.dueDate! <= date : r.dueDate === date))
+        .sort((a, b) => compareReminders(a, b, lingering)),
+    [state.reminders, date, isToday, lingering],
   )
 
   const weekStart = startOfWeek(date, state.prefs.weekStartsOn)
@@ -136,27 +142,51 @@ export function HomeApp({
           ) : (
             reminders.map((r) => {
               const list = state.lists.find((l) => l.id === r.listId)
-              const overdue = !!r.dueDate && r.dueDate < today
+              const overdue = !!r.dueDate && r.dueDate < today && !r.completed
               return (
-                <li key={r.id} className={`home__rem tint-${list?.tint ?? 'blue'}`}>
-                  <button
-                    type="button"
-                    className="rem__check"
-                    onClick={() => toggleReminder(r.id)}
-                    aria-label={`Complete ${r.title || 'reminder'}`}
-                  />
-                  <button type="button" className="home__rembody" onClick={() => openReminder(r.id, r.listId)}>
-                    <span className="home__remtitle">
-                      {r.priority > 0 && <span className="rem__priority">{'!'.repeat(r.priority)}</span>}
-                      {r.title || 'New Reminder'}
-                      {r.flagged && <Icon name="flag" size={12} filled />}
-                    </span>
-                    <span className="home__remmeta">
-                      {overdue && <span className="home__overdue">{friendlyDate(r.dueDate!)}</span>}
-                      {r.dueTime && <span>{formatTime(r.dueTime, state.prefs.use24HourTime)}</span>}
-                      {list && <span className="home__remlist">{list.name}</span>}
-                    </span>
-                  </button>
+                <li key={r.id} className="home__remwrap">
+                  <SwipeRow
+                    left={
+                      r.completed
+                        ? undefined
+                        : {
+                            label: 'Complete',
+                            icon: 'check',
+                            tint: 'green',
+                            keepsRow: true,
+                            run: () => toggleReminder(r.id),
+                          }
+                    }
+                    right={{ label: 'Delete', icon: 'trash', tint: 'red', run: () => deleteReminder(r.id) }}
+                  >
+                    <div
+                      className={`home__rem tint-${list?.tint ?? 'blue'}${r.completed ? ' is-done' : ''}${
+                        lingering.has(r.id) ? ' is-leaving' : ''
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className={`rem__check${r.completed ? ' is-on' : ''}`}
+                        onClick={() => toggleReminder(r.id)}
+                        aria-pressed={r.completed}
+                        aria-label={`Complete ${r.title || 'reminder'}`}
+                      >
+                        {r.completed ? <Icon name="check" size={9} strokeWidth={3.2} /> : null}
+                      </button>
+                      <button type="button" className="home__rembody" onClick={() => openReminder(r.id, r.listId)}>
+                        <span className="home__remtitle">
+                          {r.priority > 0 && <span className="rem__priority">{'!'.repeat(r.priority)}</span>}
+                          {r.title || 'New Reminder'}
+                          {r.flagged && <Icon name="flag" size={12} filled />}
+                        </span>
+                        <span className="home__remmeta">
+                          {overdue && <span className="home__overdue">{friendlyDate(r.dueDate!)}</span>}
+                          {r.dueTime && <span>{formatTime(r.dueTime, state.prefs.use24HourTime)}</span>}
+                          {list && <span className="home__remlist">{list.name}</span>}
+                        </span>
+                      </button>
+                    </div>
+                  </SwipeRow>
                 </li>
               )
             })

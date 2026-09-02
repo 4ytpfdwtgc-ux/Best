@@ -363,40 +363,6 @@
 }
 
 
-/* Swipe actions ---------------------------------------------------- */
-
-.swipe {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius);
-  /* Claim horizontal gestures; the list keeps vertical ones. */
-  touch-action: pan-y;
-}
-.swipe__content {
-  position: relative;
-  z-index: 1;
-  background: var(--bg-sidebar);
-  will-change: transform;
-}
-.swipe__content.is-settling { transition: transform 0.18s var(--ease); }
-
-.swipe__action {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--tint);
-  background: var(--tint-bg);
-}
-.swipe__action--left { justify-content: flex-start; }
-.swipe__action--right { justify-content: flex-end; }
-/* Past the commit point the action fills, so letting go looks decisive. */
-.swipe__action.is-armed { background: var(--tint); color: #fff; }
-
 /* Page icon picker -------------------------------------------------- */
 
 .iconpicker { position: fixed; width: 252px; padding: 4px 0 8px; }

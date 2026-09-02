@@ -10,7 +10,7 @@ import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon, isIconName } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { NoteEditor } from './NoteEditor'
-import { SwipeRow } from './SwipeRow'
+import { SwipeRow } from '../ui/SwipeRow'
 
 export function NotesApp({
   sidebarOpen,

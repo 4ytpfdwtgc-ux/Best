@@ -95,6 +95,8 @@
   min-height: 0;
 }
 
+.home__remwrap { --swipe-bg: var(--bg-window); }
+
 .home__rem {
   display: flex;
   align-items: center;
@@ -104,6 +106,9 @@
   border-bottom: 1px solid var(--line);
 }
 .home__rem:hover { background: var(--bg-hover); }
+.home__rem.is-done .home__remtitle { color: var(--text-tertiary); text-decoration: line-through; }
+/* Struck through and dimmed for a beat, then the pane drops it. */
+.home__rem.is-leaving { opacity: 0.55; transition: opacity 0.4s var(--ease); }
 /* The tick box rides the same scale as the row's text, so the two stay in
    proportion; its ring thins with it rather than looking drawn on. */
 .home__rem .rem__check {
@@ -112,6 +117,7 @@
   height: calc(16px * var(--home-text, 1));
   box-shadow: inset 0 0 0 calc(1.4px * var(--home-text, 1)) var(--text-tertiary);
 }
+.home__rem .rem__check.is-on { box-shadow: none; }
 .home__rem .rem__check:hover {
   box-shadow: inset 0 0 0 calc(1.4px * var(--home-text, 1)) var(--text-secondary);
 }

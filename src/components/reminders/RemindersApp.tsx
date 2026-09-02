@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
+import { useLingering } from '../../state/linger'
 import { groupRows, selectionTitle, viewRows } from '../../state/selectors'
 import { addReminder, setActiveView, setSelectedReminder } from '../../state/actions'
 import { todayISO } from '../../lib/date'
@@ -34,8 +35,10 @@ export function RemindersApp({
   const [query, setQuery] = useState('')
   const [sheet, setSheet] = useState<{ list?: ReminderList } | null>(null)
 
+  // Reminders completed a moment ago are held in the list, struck through.
+  const lingering = useLingering()
   const view = state.views.find((v) => v.id === state.activeViewId) ?? state.views[0]
-  const rows = useMemo(() => viewRows(state, view, query), [state, view, query])
+  const rows = useMemo(() => viewRows(state, view, query, lingering), [state, view, query, lingering])
   const groups = useMemo(() => groupRows(state, view, rows), [state, view, rows])
   const selected = state.reminders.find((r) => r.id === state.selectedReminderId) ?? null
 
@@ -137,7 +140,13 @@ export function RemindersApp({
           <TableView state={state} view={view} groups={groups} selectedId={state.selectedReminderId} />
         ) : (
           <div className="db-scroll scroll">
-            <ListView state={state} view={view} groups={groups} selectedId={state.selectedReminderId} />
+            <ListView
+              state={state}
+              view={view}
+              groups={groups}
+              selectedId={state.selectedReminderId}
+              lingering={lingering}
+            />
           </div>
         )}
       </section>
