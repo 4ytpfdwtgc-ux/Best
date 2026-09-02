@@ -35,6 +35,19 @@ body {
     min-height: 34px;
   }
   .rem__check { width: 22px; height: 22px; }
+
+  /*
+   * The split view's tick box is scaled down with its row, which leaves it
+   * far under a comfortable tap target. Extend the hit area instead of the
+   * box: wider to the left and vertically, where there is only padding, and
+   * barely to the right so it cannot swallow taps meant for the title.
+   */
+  .home__rem .rem__check { position: relative; }
+  .home__rem .rem__check::after {
+    content: '';
+    position: absolute;
+    inset: -9px -4px -9px -9px;
+  }
   .rem__check--sm { width: 18px; height: 18px; }
   .side-item { padding-top: 9px; padding-bottom: 9px; }
   .note-card { padding-top: 11px; padding-bottom: 11px; }

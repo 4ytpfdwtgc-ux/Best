@@ -104,7 +104,17 @@
   border-bottom: 1px solid var(--line);
 }
 .home__rem:hover { background: var(--bg-hover); }
-.home__rem .rem__check { margin-top: 0; }
+/* The tick box rides the same scale as the row's text, so the two stay in
+   proportion; its ring thins with it rather than looking drawn on. */
+.home__rem .rem__check {
+  margin-top: 0;
+  width: calc(16px * var(--home-text, 1));
+  height: calc(16px * var(--home-text, 1));
+  box-shadow: inset 0 0 0 calc(1.4px * var(--home-text, 1)) var(--text-tertiary);
+}
+.home__rem .rem__check:hover {
+  box-shadow: inset 0 0 0 calc(1.4px * var(--home-text, 1)) var(--text-secondary);
+}
 
 .home__rembody {
   flex: 1;
