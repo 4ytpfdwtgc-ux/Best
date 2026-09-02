@@ -177,7 +177,7 @@ function DragGlyph() {
   return (
     <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true">
       {[3, 7, 11].map((y) =>
-        [3, 9].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" fill="currentColor" />),
+        [3, 9].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.15" fill="currentColor" />),
       )}
     </svg>
   )

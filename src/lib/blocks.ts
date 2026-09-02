@@ -27,13 +27,13 @@ export const BLOCK_MENU: {
   { type: 'h1', label: 'Heading 1', hint: 'Big section heading.', keywords: ['h1', 'heading', 'title', 'big'], glyph: 'H1' },
   { type: 'h2', label: 'Heading 2', hint: 'Medium section heading.', keywords: ['h2', 'heading', 'subtitle'], glyph: 'H2' },
   { type: 'h3', label: 'Heading 3', hint: 'Small section heading.', keywords: ['h3', 'heading', 'subheading'], glyph: 'H3' },
-  { type: 'todo', label: 'To-do list', hint: 'Track tasks with a checkbox.', keywords: ['todo', 'task', 'checkbox', 'check'], glyph: '☑' },
+  { type: 'todo', label: 'To-do list', hint: 'Track tasks with a checkbox.', keywords: ['todo', 'task', 'checkbox', 'check'], glyph: '✓' },
   { type: 'bullet', label: 'Bulleted list', hint: 'Create a simple bulleted list.', keywords: ['bullet', 'list', 'unordered'], glyph: '•' },
   { type: 'numbered', label: 'Numbered list', hint: 'Create a list with numbering.', keywords: ['number', 'ordered', 'list'], glyph: '1.' },
-  { type: 'toggle', label: 'Toggle list', hint: 'Hide and show content inside.', keywords: ['toggle', 'collapse', 'fold', 'details'], glyph: '▸' },
-  { type: 'quote', label: 'Quote', hint: 'Capture a quote.', keywords: ['quote', 'blockquote', 'citation'], glyph: '❝' },
-  { type: 'callout', label: 'Callout', hint: 'Make writing stand out.', keywords: ['callout', 'note', 'info', 'aside'], glyph: '💡' },
-  { type: 'divider', label: 'Divider', hint: 'Visually divide blocks.', keywords: ['divider', 'line', 'separator', 'hr'], glyph: '—' },
+  { type: 'toggle', label: 'Toggle list', hint: 'Hide and show content inside.', keywords: ['toggle', 'collapse', 'fold', 'details'], glyph: '›' },
+  { type: 'quote', label: 'Quote', hint: 'Capture a quote.', keywords: ['quote', 'blockquote', 'citation'], glyph: '"' },
+  { type: 'callout', label: 'Callout', hint: 'Make writing stand out.', keywords: ['callout', 'note', 'info', 'aside'], glyph: '!' },
+  { type: 'divider', label: 'Divider', hint: 'Visually divide blocks.', keywords: ['divider', 'line', 'separator', 'hr'], glyph: '–' },
   { type: 'code', label: 'Code', hint: 'Capture a code snippet.', keywords: ['code', 'snippet', 'monospace'], glyph: '{}' },
 ]
 

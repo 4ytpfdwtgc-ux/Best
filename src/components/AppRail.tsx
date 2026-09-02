@@ -37,7 +37,7 @@ export function AppRail({
             aria-label={m.label}
             aria-current={module === m.id}
           >
-            <Icon name={m.icon} size={20} strokeWidth={1.8} />
+            <Icon name={m.icon} size={20} />
             <span className="rail__label">{m.label}</span>
           </button>
         ))}

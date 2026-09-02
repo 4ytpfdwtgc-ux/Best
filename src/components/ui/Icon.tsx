@@ -1,41 +1,62 @@
-/** Inline stroke icons. One shared 24x24 grid keeps optical weight consistent. */
+/**
+ * Inline stroke icons.
+ *
+ * Every glyph is drawn on the same 24x24 grid inside a 20x20 live area, from
+ * as few strokes as the meaning allows, with no detail finer than about 2
+ * units. They are rendered between 9 and 23 pixels, so anything more intricate
+ * would turn to mush at the sizes that actually get used.
+ */
 
 const paths: Record<string, string> = {
-  check: 'M4 12.5l5 5L20 6.5',
-  plus: 'M12 5v14M5 12h14',
-  minus: 'M5 12h14',
-  close: 'M6 6l12 12M18 6L6 18',
-  chevronLeft: 'M15 5l-7 7 7 7',
-  chevronRight: 'M9 5l7 7-7 7',
-  chevronDown: 'M5 9l7 7 7-7',
-  search: 'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3',
-  flag: 'M6 21V4h12l-2.5 4L18 12H6',
-  clock: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3.5 2',
-  calendar: 'M4 8h16M8 3v3M16 3v3M5.5 5h13A1.5 1.5 0 0120 6.5v13a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19.5v-13A1.5 1.5 0 015.5 5z',
-  list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
-  note: 'M6 3h8l5 5v13H6zM14 3v5h5',
-  folder: 'M4 7.5A1.5 1.5 0 015.5 6h3.6l1.8 2H18.5A1.5 1.5 0 0120 9.5v8A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5z',
-  tag: 'M3 11.5V4.5A1.5 1.5 0 014.5 3h7l9 9-8 8-9.5-8.5zM7.5 7.5h.01',
-  trash: 'M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13',
-  info: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 7.5h.01',
-  pin: 'M9 3h6l-1 6 4 3.5H6L10 9z M12 12.5V21',
-  star: 'M12 3.5l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 10l6.1-.9z',
-  gear: 'M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19.4 13.5l1.7 1.3-1.7 3-2-.8a7.7 7.7 0 01-1.9 1.1l-.3 2.1h-3.4l-.3-2.1a7.7 7.7 0 01-1.9-1.1l-2 .8-1.7-3 1.7-1.3a7.6 7.6 0 010-2.2L4.6 9.8l1.7-3 2 .8A7.7 7.7 0 0110.2 6.5l.3-2.1h3.4l.3 2.1c.68.26 1.31.63 1.87 1.09l2-.8 1.7 3-1.7 1.3c.07.73.07 1.47 0 2.2z',
+  /* Marks and arrows */
+  check: 'M5 12.5l4.5 4.5L19 7',
+  plus: 'M12 5.5v13M5.5 12h13',
+  minus: 'M5.5 12h13',
+  close: 'M6.5 6.5l11 11M17.5 6.5l-11 11',
+  chevronLeft: 'M14.5 5.5L8 12l6.5 6.5',
+  chevronRight: 'M9.5 5.5L16 12l-6.5 6.5',
+  chevronDown: 'M5.5 9.5L12 16l6.5-6.5',
+  arrowRight: 'M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5',
   ellipsis: 'M6 12h.01M12 12h.01M18 12h.01',
-  sidebar: 'M4.5 5h15A1.5 1.5 0 0121 6.5v11a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 17.5v-11A1.5 1.5 0 014.5 5zM9.5 5v14',
-  today: 'M4 8h16M8 3v3M16 3v3M5.5 5h13A1.5 1.5 0 0120 6.5v13a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19.5v-13A1.5 1.5 0 015.5 5zM12 12h4v4h-4z',
-  inbox: 'M4 13h4l1.5 3h5L16 13h4M4 13l2.5-7h11L20 13v5.5A1.5 1.5 0 0118.5 20h-13A1.5 1.5 0 014 18.5z',
-  location: 'M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
-  link: 'M10 13.5a3.5 3.5 0 005 0l3-3a3.5 3.5 0 10-5-5l-1 1M14 10.5a3.5 3.5 0 00-5 0l-3 3a3.5 3.5 0 105 5l1-1',
-  bell: 'M18 15.5V10a6 6 0 10-12 0v5.5L4.5 18h15zM10 20.5a2.2 2.2 0 004 0',
-  repeat: 'M4 10.5A5.5 5.5 0 019.5 5H18M18 5l-3-3M18 5l-3 3M20 13.5A5.5 5.5 0 0114.5 19H6M6 19l3 3M6 19l3-3',
-  sun: 'M12 17a5 5 0 100-10 5 5 0 000 10zM12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8',
-  moon: 'M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z',
-  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+
+  /* Objects */
+  search: 'M10.5 17.5a7 7 0 100-14 7 7 0 000 14zM20 20l-4.1-4.1',
+  flag: 'M6 20.5v-16M6 5h12l-3 4 3 4H6',
+  clock: 'M12 20.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17zM12 7.5V12l3.2 1.9',
+  calendar: 'M4 9h16M8 3.5v3M16 3.5v3M5 5.5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1v-12a1 1 0 011-1z',
+  today: 'M4 9h16M8 3.5v3M16 3.5v3M5 5.5h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1v-12a1 1 0 011-1zM12 14h.01',
+  note: 'M6 4.5a1 1 0 011-1h6.5L18.5 8.5v11a1 1 0 01-1 1H7a1 1 0 01-1-1zM13.5 3.5v5h5',
+  folder: 'M4 7.5a1 1 0 011-1h4l2 2h8a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1z',
+  tag: 'M4 4.5h7L20.5 14l-6.5 6.5L4.5 11zM8 8.2h.01',
+  trash: 'M5 7h14M10 7V4.5h4V7M7 7l.9 12.5h8.2L17 7',
+  info: 'M12 20.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17zM12 11.5v5M12 7.8h.01',
+  pin: 'M9.5 3.5h5l-.7 6 3.2 3v.8H7v-.8l3.2-3zM12 13.3v7.2',
+  star: 'M12 4l2.5 5.2 5.6.8-4.05 4 .95 5.6-5-2.7-5 2.7.95-5.6L3.9 10l5.6-.8z',
+  inbox: 'M4 13.5h4.5l1.2 2.5h4.6l1.2-2.5H20M4 13.5L6.5 6h11L20 13.5v5a1 1 0 01-1 1H5a1 1 0 01-1-1z',
+  location: 'M12 20.5c4-4.2 6-7.4 6-9.9a6 6 0 10-12 0c0 2.5 2 5.7 6 9.9zM12 13.2a2.6 2.6 0 100-5.2 2.6 2.6 0 000 5.2z',
+  link: 'M10.2 13.8a3.5 3.5 0 005 0l3-3a3.5 3.5 0 00-5-5l-1 1M13.8 10.2a3.5 3.5 0 00-5 0l-3 3a3.5 3.5 0 005 5l1-1',
+  bell: 'M17.5 16V10a5.5 5.5 0 10-11 0v6l-1.5 2.5h14zM10.2 21a2 2 0 003.6 0',
+  repeat: 'M4.5 11.5A6.5 6.5 0 0111 5h8.5M16.5 2l3 3-3 3M19.5 12.5A6.5 6.5 0 0113 19H4.5M7.5 22l-3-3 3-3',
+  sun: 'M12 16.6a4.6 4.6 0 100-9.2 4.6 4.6 0 000 9.2M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7',
+  moon: 'M20 14.6A8.6 8.6 0 019.4 4 8.6 8.6 0 1020 14.6z',
   circle: 'M12 20a8 8 0 100-16 8 8 0 000 16z',
-  text: 'M5 6h14M5 12h14M5 18h9',
-  checklist: 'M4 6.5l1.8 1.8L9 5M4 17.5l1.8 1.8L9 14M12 7h8M12 18h8',
-  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+
+  /* Layout and lists */
+  sidebar: 'M4.5 5.5h15a1 1 0 011 1v11a1 1 0 01-1 1h-15a1 1 0 01-1-1v-11a1 1 0 011-1zM9.5 5.5v13',
+  list: 'M9 6.5h11M9 12h11M9 17.5h11M4.8 6.5h.01M4.8 12h.01M4.8 17.5h.01',
+  text: 'M5 6.5h14M5 12h14M5 17.5h9',
+  checklist: 'M4.5 7l1.7 1.7 3.3-3.3M4.5 17l1.7 1.7 3.3-3.3M12.5 7.5h7M12.5 17.5h7',
+  grid: 'M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z',
+
+  /*
+   * Settings is two sliders rather than a cog. A cog simplified far enough to
+   * survive 13px becomes a ring with radial ticks, which is the sun icon; this
+   * stays legible and cannot be confused with anything else in the set.
+   */
+  gear:
+    'M4 8.5h16M4 15.5h16' +
+    'M17.4 8.5a2.4 2.4 0 10-4.8 0 2.4 2.4 0 004.8 0' +
+    'M11.4 15.5a2.4 2.4 0 10-4.8 0 2.4 2.4 0 004.8 0',
 }
 
 export type IconName = keyof typeof paths
@@ -43,7 +64,7 @@ export type IconName = keyof typeof paths
 export function Icon({
   name,
   size = 16,
-  strokeWidth = 1.7,
+  strokeWidth = 1.5,
   filled = false,
   className,
 }: {

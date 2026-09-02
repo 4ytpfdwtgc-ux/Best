@@ -26,7 +26,7 @@ export function TabBar({
           onClick={() => onSelect(t.id)}
           aria-current={module === t.id}
         >
-          <Icon name={t.icon} size={23} strokeWidth={1.8} />
+          <Icon name={t.icon} size={23} />
           <span className="tabbar__label">{t.label}</span>
         </button>
       ))}
