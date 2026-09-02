@@ -1,5 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
-  <rect width="180" height="180" rx="40" fill="#0a84ff"/>
-  <path d="M50 94l22 22 56-58" stroke="#fff" stroke-width="16" fill="none"
-        stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="Cadence">
+  <rect width="180" height="180" rx="40" fill="#f3f2ef"/>
+  <g fill="none" stroke="#2f2f31" stroke-linecap="round" stroke-linejoin="round">
+    <!-- binding tabs -->
+    <path d="M65.4 39.8v17M115.5 39.8v17" stroke-width="10.5"/>
+    <!-- body + header rule -->
+    <rect x="42.2" y="51.7" width="95.6" height="89.7" rx="6.9" stroke-width="8.3"/>
+    <path d="M42.2 71.6h95.6" stroke-width="8.3"/>
+    <!-- agenda lines -->
+    <path d="M60.9 102.8h49M60.9 121.8h36.2" stroke-width="9"/>
+  </g>
+  <circle cx="122.4" cy="86.7" r="7.5" fill="#2f2f31"/>
 </svg>

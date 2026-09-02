@@ -18,8 +18,10 @@
     <meta name="format-detection" content="telephone=no,date=no,address=no,email=no" />
 
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <!-- iOS only honours a raster apple-touch-icon; the SVG is for everyone else. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" sizes="192x192" href="/icon-192.png" type="image/png" />
 
     <title>Cadence — Reminders, Calendar, Notes</title>
 
