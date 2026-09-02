@@ -260,7 +260,7 @@ body {
   /* Home split: tighter chrome so the thirds stay honest. */
   .home__title { font-size: 22px; }
   .home__bar { padding: 8px 10px 4px; padding-top: max(8px, env(safe-area-inset-top)); }
-  .home__remtitle { font-size: 15px; }
+  .home__remtitle { font-size: calc(15px * var(--home-text, 1)); }
   .weekstrip__num { width: 30px; height: 30px; font-size: 15px; }
 }
 

@@ -48,7 +48,13 @@
   min-height: 0;
   overflow: hidden;
 }
-.home__pane--reminders { flex: 1; }
+.home__pane--reminders {
+  flex: 1;
+  /* Reminder rows run at 80% of the app's text scale, so more of the day fits
+     into the top third. The pane heading is deliberately outside this: it is
+     the twin of the Calendar heading below and the two should match. */
+  --home-text: 0.8;
+}
 .home__pane--calendar {
   flex: 2 1 0;
   border-top: 1px solid var(--line);
@@ -113,7 +119,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 14px;
+  font-size: calc(14px * var(--home-text, 1));
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,7 +130,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: calc(12px * var(--home-text, 1));
   color: var(--text-tertiary);
 }
 .home__overdue { color: var(--tint-red); font-weight: 600; }
@@ -137,7 +143,7 @@
   gap: 6px;
   padding: 18px 8px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: calc(13px * var(--home-text, 1));
 }
 
 .home__grid { flex: 1; min-height: 0; display: flex; background: var(--bg-window); }
