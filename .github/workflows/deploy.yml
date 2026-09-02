@@ -38,7 +38,27 @@ jobs:
       # Pages itself must be switched on once by hand, under
       # Settings -> Pages -> Source: GitHub Actions. The workflow token is not
       # allowed to create the site, so this step only reads the existing one.
-      - uses: actions/configure-pages@v5
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      # The underlying error only says "Not Found", which is easy to misread as
+      # a broken workflow. Say what to actually change, on the run's summary.
+      - if: failure() && steps.pages.outcome == 'failure'
+        run: |
+          {
+            echo '## Pages is not set to build from GitHub Actions'
+            echo
+            echo 'This workflow builds the site but cannot publish it until the'
+            echo 'repository is told to take its Pages content from Actions.'
+            echo
+            echo '1. Open **Settings → Pages**.'
+            echo '2. Under **Build and deployment**, set **Source** to **GitHub Actions**.'
+            echo '3. Re-run this workflow.'
+            echo
+            echo 'While Source is "Deploy from a branch", Pages serves the'
+            echo 'repository source rather than the built app, which loads as a'
+            echo 'near-empty page.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-pages-artifact@v3
         with:

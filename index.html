@@ -22,9 +22,50 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 
     <title>Cadence — Reminders, Calendar, Notes</title>
+
+    <style>
+      /* Styling for the boot fallback only; the app ships its own stylesheet. */
+      .boot {
+        max-width: 34rem;
+        margin: 12vh auto;
+        padding: 0 1.5rem;
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        color: #37352f;
+      }
+      .boot h1 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+      .boot p { margin: 0 0 0.75rem; color: #787774; }
+      .boot code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #191919; }
+        .boot { color: rgba(255, 255, 255, 0.81); }
+        .boot p { color: rgba(255, 255, 255, 0.46); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        Replaced by the app when it mounts. If this is still on screen, the
+        bundle never ran — most often because the built app was not what got
+        published.
+      -->
+      <div class="boot">
+        <h1>Cadence</h1>
+        <p><strong>The app didn’t load.</strong></p>
+        <p>
+          If you are seeing this on GitHub Pages, the site is serving the
+          repository source instead of the built app. Set
+          <strong>Settings → Pages → Source</strong> to
+          <strong>GitHub Actions</strong>, then re-run the
+          “Deploy to GitHub Pages” workflow.
+        </p>
+        <p>
+          Running it yourself? <code>npm install &amp;&amp; npm run dev</code> —
+          opening <code>index.html</code> straight from disk cannot work, because
+          the entry point is TypeScript that has to be built first.
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -21,8 +21,15 @@ npm run build          # typecheck, then production build into dist/
 
 Pushing to the development branch (or `main`) runs
 `.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to
-GitHub Pages. Enable it once under **Settings → Pages → Source: GitHub
-Actions**; the workflow then keeps the site in step with the branch.
+GitHub Pages.
+
+**Set Source to GitHub Actions, not a branch.** Under **Settings → Pages →
+Build and deployment**, *Source* must be **GitHub Actions**. With the default
+"Deploy from a branch", Pages serves the repository source instead of the build:
+the root `index.html` points at `src/main.tsx`, which a browser cannot execute,
+so the site loads as a near-empty page and the deploy workflow fails at
+`configure-pages`. If that happens the page now says so rather than showing
+nothing.
 
 The build uses `base: './'`, so the same `dist/` works from a domain root, from
 a Pages project subpath like `/Best/`, or from any other static host. The web
