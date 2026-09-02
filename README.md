@@ -23,6 +23,13 @@ Pushing to the development branch (or `main`) runs
 `.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to
 GitHub Pages.
 
+**One workflow, not two.** GitHub's Pages setup screen offers a Jekyll starter
+workflow. Do not add it: it builds the repository root with Jekyll and publishes
+*that*, so it competes with `deploy.yml` for the same Pages deployment. Both use
+the `pages` concurrency group, so they queue rather than cancel, and whichever
+finishes last is what the site serves — a coin flip between the built app and
+the raw source.
+
 **Set Source to GitHub Actions, not a branch.** Under **Settings → Pages →
 Build and deployment**, *Source* must be **GitHub Actions**. With the default
 "Deploy from a branch", Pages serves the repository source instead of the build:
