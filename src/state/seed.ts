@@ -6,7 +6,7 @@ import { addDays, nowISO, todayISO } from '../lib/date'
 import { emptyBlock } from '../lib/blocks'
 import { uid } from '../lib/id'
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 /** Ids of the built-in properties, referenced by the seeded views. */
 export const PROP = {
@@ -249,7 +249,7 @@ export function createInitialState(): AppState {
       id: uid('note'),
       folderId: 'fold_work',
       title: 'Cadence',
-      icon: '📐',
+      icon: 'target',
       pinned: true,
       locked: false,
       tags: ['tag_focus'],
@@ -274,7 +274,7 @@ export function createInitialState(): AppState {
       id: uid('note'),
       folderId: 'fold_notes',
       title: 'Packing list',
-      icon: '🧳',
+      icon: 'plane',
       pinned: false,
       locked: false,
       tags: [],
@@ -291,7 +291,7 @@ export function createInitialState(): AppState {
       id: uid('note'),
       folderId: 'fold_ideas',
       title: 'Weekend projects',
-      icon: '🔨',
+      icon: 'bulb',
       pinned: false,
       locked: false,
       tags: [],

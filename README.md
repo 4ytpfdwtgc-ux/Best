@@ -108,8 +108,17 @@ absolute ones would resolve to the domain root and break the installed app.
   start merges or lifts out, Tab and Shift-Tab indent, arrows move between
   blocks, and `⌘B` / `⌘I` / `⌘E` mark the selection.
 - Toggles collapse the deeper blocks that follow them.
-- Folders, pinning, search, sort, and a Recently Deleted folder with restore and
-  delete-permanently.
+- Pages have an icon from the same set the rest of the interface uses, chosen
+  from a picker on the page itself.
+- **Swipe a page in the list**: left to delete, right to archive — and right
+  again in the Archive to restore it. The gesture uses pointer events, so it
+  works with a finger or a mouse, and vertical movement hands control back to
+  the scroller so it never fights the list. Under the commit distance the row
+  springs back; past it the action fills before firing.
+- Folders, pinning, search, sort, an Archive for pages that are done but worth
+  keeping, and a Recently Deleted folder with restore and delete-permanently.
+  Recently Deleted deliberately has no swipe: the only action left there is
+  irreversible.
 - "Create a reminder from this page" pushes a thought into Tasks.
 
 ## Keyboard
@@ -226,9 +235,10 @@ rich-text model to keep in sync.
 The schema is versioned. State written by an older build is migrated on load
 rather than discarded, and the upgraded state is written straight back so a
 migration runs once. `state/migrate.ts` turns the previous markdown note bodies
-into blocks, gives every task the property bag, and converts list symbols from
-the emoji they used to be into icon names. A symbol it does not recognise is
-left alone — an emoji still renders, so nothing chosen elsewhere is lost.
+into blocks, gives every task the property bag, and converts list symbols and
+page icons from the emoji they used to be into icon names. A symbol it does not
+recognise is left alone — an emoji still renders, so nothing chosen elsewhere is
+lost.
 
 Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get

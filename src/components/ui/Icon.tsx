@@ -105,6 +105,13 @@ export const LIST_SYMBOLS: string[] = [
   'plane', 'book', 'bulb', 'dumbbell', 'gift', 'heart', 'music', 'star',
 ]
 
+/** The same, plus the document-ish glyphs a page might want. */
+export const PAGE_SYMBOLS: string[] = [
+  'note', 'book', 'clipboard', 'checklist', 'text', 'bulb', 'target', 'flag',
+  'calendar', 'clock', 'tag', 'folder', 'briefcase', 'home', 'cart', 'plane',
+  'dumbbell', 'gift', 'heart', 'music', 'star', 'location', 'link', 'grid',
+]
+
 export function Icon({
   name,
   size = 16,

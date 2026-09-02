@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { Note } from '../../types'
 import { useApp } from '../../state/store'
 import {
-  addTag, deleteNoteForever, reminderFromNote, restoreNote, setModule,
-  toggleNotePin, trashNote, updateNote,
+  addTag, archiveNote, deleteNoteForever, reminderFromNote, restoreNote,
+  setModule, toggleNotePin, trashNote, unarchiveNote, updateNote,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
 import { Icon } from '../ui/Icon'
@@ -19,7 +19,7 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
     return (
       <section className={`editor${onBack ? ' editor--pushed' : ''}`}>
         {onBack && <BackBar onBack={onBack} />}
-        <div className="editor__trashbar">
+        <div className="editor__notice editor__notice--danger">
           <span>This page is in Recently Deleted.</span>
           <button type="button" className="btn" onClick={() => restoreNote(note.id)}>Restore</button>
           <button type="button" className="btn btn--danger" onClick={() => deleteNoteForever(note.id)}>
@@ -36,6 +36,13 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
   return (
     <section className={`editor${onBack ? ' editor--pushed' : ''}`} aria-label="Page">
       {onBack && <BackBar onBack={onBack} />}
+
+      {note.archivedAt && (
+        <div className="editor__notice">
+          <span>This page is archived.</span>
+          <button type="button" className="btn" onClick={() => unarchiveNote(note.id)}>Restore</button>
+        </div>
+      )}
 
       <header className="editor__bar">
         <span className="editor__crumb">
@@ -67,6 +74,17 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
         >
           <Icon name="checklist" size={15} />
         </button>
+        {!note.archivedAt && (
+          <button
+            type="button"
+            className="tool-btn"
+            onClick={() => archiveNote(note.id)}
+            title="Archive"
+            aria-label="Archive"
+          >
+            <Icon name="inbox" size={15} />
+          </button>
+        )}
         <button
           type="button"
           className="tool-btn"

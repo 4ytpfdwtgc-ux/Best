@@ -2,14 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
 import {
-  addFolder, addNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
-  setSelectedFolder, setSelectedNote, updateFolder,
+  addFolder, addNote, archiveNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
+  setSelectedFolder, setSelectedNote, trashNote, unarchiveNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
-import { Icon } from '../ui/Icon'
+import { Icon, isIconName } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { NoteEditor } from './NoteEditor'
+import { SwipeRow } from './SwipeRow'
 
 export function NotesApp({
   sidebarOpen,
@@ -25,6 +26,7 @@ export function NotesApp({
   const notes = useMemo(() => visibleNotes(state, query), [state, query])
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
   const trashCount = state.notes.filter((n) => n.trashedAt).length
+  const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
 
   // Keep a valid selection as the filtered list changes. On a phone the editor
   // is a pushed screen, so nothing is auto-selected — that would skip the list.
@@ -56,7 +58,9 @@ export function NotesApp({
       ? 'All Notes'
       : state.selectedFolderId === 'trash'
         ? 'Recently Deleted'
-        : (state.folders.find((f) => f.id === state.selectedFolderId)?.name ?? 'Notes')
+        : state.selectedFolderId === 'archive'
+          ? 'Archive'
+          : (state.folders.find((f) => f.id === state.selectedFolderId)?.name ?? 'Notes')
 
   return (
     <div className="module">
@@ -73,7 +77,16 @@ export function NotesApp({
           )}
         </div>
 
-        <div className="sidebar__body scroll">
+        <div
+          className="sidebar__body scroll"
+          onClick={(e) => {
+            // On a phone the drawer is modal, so choosing a folder dismisses
+            // it — but renaming one, or reaching its delete button, must not.
+            if (!isPhone) return
+            if ((e.target as HTMLElement).closest('input, .side-item__more')) return
+            onToggleSidebar()
+          }}
+        >
           <ul className="side-list">
             <li>
               <button
@@ -126,6 +139,17 @@ export function NotesApp({
 
           <div className="sidebar__section">Other</div>
           <ul className="side-list">
+            <li>
+              <button
+                type="button"
+                className={`side-item tint-gray${state.selectedFolderId === 'archive' ? ' is-on' : ''}`}
+                onClick={() => setSelectedFolder('archive')}
+              >
+                <span className="side-item__glyph side-item__glyph--plain"><Icon name="inbox" size={16} /></span>
+                <span className="side-item__name">Archive</span>
+                <span className="side-item__count">{archiveCount}</span>
+              </button>
+            </li>
             <li>
               <button
                 type="button"
@@ -183,13 +207,28 @@ export function NotesApp({
           )}
           {notes.map((note) => (
             <li key={note.id}>
+              <SwipeRow
+                // Recently Deleted holds only an irreversible action, which is
+                // not something a swipe should be able to reach.
+                disabled={state.selectedFolderId === 'trash'}
+                right={{ label: 'Delete', icon: 'trash', tint: 'red', run: () => trashNote(note.id) }}
+                left={
+                  state.selectedFolderId === 'archive'
+                    ? { label: 'Restore', icon: 'arrowRight', tint: 'green', run: () => unarchiveNote(note.id) }
+                    : { label: 'Archive', icon: 'inbox', tint: 'blue', run: () => archiveNote(note.id) }
+                }
+              >
               <button
                 type="button"
                 className={`note-card${note.id === state.selectedNoteId ? ' is-on' : ''}`}
                 onClick={() => setSelectedNote(note.id)}
               >
                 <span className="note-card__title">
-                  <span className="note-card__icon">{note.icon ?? '📄'}</span>
+                  <span className="note-card__icon">
+                    {isIconName(note.icon ?? 'note')
+                      ? <Icon name={note.icon ?? 'note'} size={14} />
+                      : note.icon}
+                  </span>
                   {noteTitle(note)}
                   {note.pinned && <Icon name="pin" size={11} filled />}
                 </span>
@@ -198,6 +237,7 @@ export function NotesApp({
                   <span className="note-card__snippet">{noteSnippet(note)}</span>
                 </span>
               </button>
+              </SwipeRow>
             </li>
           ))}
         </ul>

@@ -20,6 +20,7 @@ export function migrate(saved: Partial<AppState> & { version?: number }): AppSta
 
   if ((saved.version ?? 0) < 2) state = migrateV1toV2(state, saved)
   if ((saved.version ?? 0) < 3) state = migrateV2toV3(state)
+  if ((saved.version ?? 0) < 4) state = migrateV3toV4(state)
 
   return {
     ...state,
@@ -104,6 +105,29 @@ function migrateV2toV3(state: AppState): AppState {
       const base = (list.symbol ?? '').replace(/\uFE0F/g, '')
       const icon = EMOJI_TO_ICON[base]
       return icon ? { ...list, symbol: icon } : list
+    }),
+  }
+}
+
+/** Page icons the app itself shipped, mapped onto the icon set. */
+const NOTE_EMOJI_TO_ICON: Record<string, string> = {
+  '📐': 'target',
+  '🔨': 'bulb',
+  '🧳': 'plane',
+  '📄': 'note',
+  '📝': 'note',
+  '📋': 'clipboard',
+  '📚': 'book',
+  '💡': 'bulb',
+}
+
+function migrateV3toV4(state: AppState): AppState {
+  return {
+    ...state,
+    notes: state.notes.map((note) => {
+      const base = (note.icon ?? '').replace(/\uFE0F/g, '')
+      const icon = NOTE_EMOJI_TO_ICON[base]
+      return icon ? { ...note, icon } : note
     }),
   }
 }

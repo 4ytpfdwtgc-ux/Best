@@ -191,10 +191,13 @@ export function layoutColumns(items: EventOccurrence[]): { occ: EventOccurrence;
 
 export function visibleNotes(s: AppState, query = ''): Note[] {
   const q = query.trim().toLowerCase()
-  const inTrash = s.selectedFolderId === 'trash'
+  const view = s.selectedFolderId
+  const inTrash = view === 'trash'
+  const inArchive = view === 'archive'
   return s.notes
-    .filter((n) => (inTrash ? !!n.trashedAt : !n.trashedAt))
-    .filter((n) => inTrash || s.selectedFolderId === 'all' || n.folderId === s.selectedFolderId)
+    // Trash and Archive are exclusive views; every other view shows neither.
+    .filter((n) => (inTrash ? !!n.trashedAt : inArchive ? !!n.archivedAt && !n.trashedAt : !n.trashedAt && !n.archivedAt))
+    .filter((n) => inTrash || inArchive || view === 'all' || n.folderId === view)
     .filter((n) => !q || `${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q))
     .sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
@@ -253,7 +256,8 @@ export function search(s: AppState, query: string, limit = 20): SearchHit[] {
   }
 
   for (const n of s.notes) {
-    if (n.trashedAt || !`${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q)) continue
+    if (n.trashedAt || n.archivedAt) continue
+    if (!`${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q)) continue
     const folder = s.folders.find((f) => f.id === n.folderId)
     hits.push({
       kind: 'note',

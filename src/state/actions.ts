@@ -419,8 +419,24 @@ export function updateNote(id: ID, patch: Partial<Note>) {
 
 export function trashNote(id: ID) {
   setState((s) => ({
-    notes: s.notes.map((n) => (n.id === id ? { ...n, trashedAt: nowISO() } : n)),
+    notes: s.notes.map((n) =>
+      n.id === id ? { ...n, trashedAt: nowISO(), archivedAt: undefined } : n,
+    ),
     selectedNoteId: s.selectedNoteId === id ? null : s.selectedNoteId,
+  }))
+}
+
+/** Move a page out of the way without deleting it. */
+export function archiveNote(id: ID) {
+  setState((s) => ({
+    notes: s.notes.map((n) => (n.id === id ? { ...n, archivedAt: nowISO() } : n)),
+    selectedNoteId: s.selectedNoteId === id ? null : s.selectedNoteId,
+  }))
+}
+
+export function unarchiveNote(id: ID) {
+  setState((s) => ({
+    notes: s.notes.map((n) => (n.id === id ? { ...n, archivedAt: undefined } : n)),
   }))
 }
 

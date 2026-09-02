@@ -6,6 +6,8 @@ import {
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
 import { toggleMark } from '../../lib/inline'
 import { setBlocks, updateNote } from '../../state/actions'
+import { Icon, isIconName } from '../ui/Icon'
+import { IconPicker } from '../ui/IconPicker'
 import { BlockRow } from './BlockRow'
 import { SlashMenu } from './SlashMenu'
 import { BlockMenu } from './BlockMenu'
@@ -21,6 +23,7 @@ export function BlockEditor({ note }: { note: Note }) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [slash, setSlash] = useState<{ blockId: string; start: number; top: number; left: number } | null>(null)
   const [menu, setMenu] = useState<{ blockId: string; top: number; left: number } | null>(null)
+  const [iconAnchor, setIconAnchor] = useState<DOMRect | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
   // The pointer handlers read the live value here; `drag` only drives rendering.
   const dragRef = useRef<DragState | null>(null)
@@ -298,13 +301,12 @@ export function BlockEditor({ note }: { note: Note }) {
         <button
           type="button"
           className="page__icon"
-          onClick={() => {
-            const icon = prompt('Page icon (emoji)', note.icon ?? '📄')
-            if (icon !== null) updateNote(note.id, { icon: icon.trim() || undefined })
-          }}
+          onClick={(e) => setIconAnchor(e.currentTarget.getBoundingClientRect())}
           aria-label="Change page icon"
         >
-          {note.icon ?? '📄'}
+          {isIconName(note.icon ?? 'note')
+            ? <Icon name={note.icon ?? 'note'} size={38} strokeWidth={1.3} />
+            : note.icon}
         </button>
         <input
           className="page__title"
@@ -361,6 +363,22 @@ export function BlockEditor({ note }: { note: Note }) {
           Click here to continue writing…
         </button>
       </div>
+
+      {iconAnchor && (
+        <IconPicker
+          value={note.icon}
+          anchor={iconAnchor}
+          onPick={(icon) => {
+            updateNote(note.id, { icon })
+            setIconAnchor(null)
+          }}
+          onClear={() => {
+            updateNote(note.id, { icon: undefined })
+            setIconAnchor(null)
+          }}
+          onClose={() => setIconAnchor(null)}
+        />
+      )}
 
       {slash && (
         <SlashMenu

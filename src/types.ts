@@ -245,7 +245,7 @@ export interface Note {
   folderId: ID
   /** The page title, shown large at the top and used in lists. */
   title: string
-  /** Page emoji, as in Notion. */
+  /** Page icon: a name from the icon set, or an emoji saved by an older build. */
   icon?: string
   blocks: Block[]
   pinned: boolean
@@ -253,6 +253,8 @@ export interface Note {
   tags: ID[]
   createdAt: string
   updatedAt: string
+  /** Set when the page is archived: out of the way, but not deleted. */
+  archivedAt?: string
   trashedAt?: string
 }
 
@@ -307,6 +309,6 @@ export interface AppState {
 
   folders: Folder[]
   notes: Note[]
-  selectedFolderId: ID | 'all' | 'trash'
+  selectedFolderId: ID | 'all' | 'archive' | 'trash'
   selectedNoteId: ID | null
 }
