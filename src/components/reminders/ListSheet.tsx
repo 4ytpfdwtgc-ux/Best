@@ -2,13 +2,12 @@ import { useState } from 'react'
 import type { ReminderList, TintName } from '../../types'
 import { addList, updateList } from '../../state/actions'
 import { Field, Sheet, TintPicker } from '../ui/primitives'
-
-const SYMBOLS = ['📋', '💼', '🏡', '🛒', '🎯', '✈️', '📚', '💡', '🏋️', '🎁', '🐾', '🎵']
+import { Icon, isIconName, LIST_SYMBOLS } from '../ui/Icon'
 
 export function ListSheet({ list, onClose }: { list?: ReminderList; onClose: () => void }) {
   const [name, setName] = useState(list?.name ?? '')
   const [tint, setTint] = useState<TintName>(list?.tint ?? 'blue')
-  const [symbol, setSymbol] = useState(list?.symbol ?? '📋')
+  const [symbol, setSymbol] = useState(list?.symbol ?? 'clipboard')
 
   function save() {
     if (list) updateList(list.id, { name: name.trim() || list.name, tint, symbol })
@@ -28,7 +27,9 @@ export function ListSheet({ list, onClose }: { list?: ReminderList; onClose: () 
       }
     >
       <div className={`list-preview tint-${tint}`}>
-        <span className="list-preview__glyph">{symbol}</span>
+        <span className="list-preview__glyph">
+          {isIconName(symbol) ? <Icon name={symbol} size={26} /> : symbol}
+        </span>
         <span className="list-preview__name">{name.trim() || 'List Name'}</span>
       </div>
 
@@ -49,16 +50,18 @@ export function ListSheet({ list, onClose }: { list?: ReminderList; onClose: () 
 
       <Field label="Symbol">
         <div className="symbol-picker" role="radiogroup" aria-label="Symbol">
-          {SYMBOLS.map((s) => (
+          {LIST_SYMBOLS.map((name) => (
             <button
-              key={s}
+              key={name}
               type="button"
               role="radio"
-              aria-checked={symbol === s}
-              className={`symbol-picker__item${symbol === s ? ' is-on' : ''}`}
-              onClick={() => setSymbol(s)}
+              aria-checked={symbol === name}
+              aria-label={name}
+              title={name}
+              className={`symbol-picker__item${symbol === name ? ' is-on' : ''}`}
+              onClick={() => setSymbol(name)}
             >
-              {s}
+              <Icon name={name} size={17} />
             </button>
           ))}
         </div>

@@ -19,6 +19,7 @@ export function migrate(saved: Partial<AppState> & { version?: number }): AppSta
   let state = { ...base, ...saved } as AppState
 
   if ((saved.version ?? 0) < 2) state = migrateV1toV2(state, saved)
+  if ((saved.version ?? 0) < 3) state = migrateV2toV3(state)
 
   return {
     ...state,
@@ -71,5 +72,38 @@ function migrateV1toV2(state: AppState, saved: Partial<AppState>): AppState {
     activeViewId: state.activeViewId ?? views[0].id,
     notes,
     reminders,
+  }
+}
+
+/**
+ * List symbols were emoji before the icon set covered them. Map the ones the
+ * app itself could have produced onto their icon, and leave anything else
+ * alone — an emoji still renders, so a symbol from elsewhere is not lost.
+ */
+const EMOJI_TO_ICON: Record<string, string> = {
+  '📥': 'inbox',
+  '📋': 'clipboard',
+  '💼': 'briefcase',
+  '🏡': 'home',
+  '🛒': 'cart',
+  '🎯': 'target',
+  '✈': 'plane',
+  '📚': 'book',
+  '💡': 'bulb',
+  '🏋': 'dumbbell',
+  '🎁': 'gift',
+  '🐾': 'heart',
+  '🎵': 'music',
+}
+
+function migrateV2toV3(state: AppState): AppState {
+  return {
+    ...state,
+    lists: state.lists.map((list) => {
+      // Emoji may carry a variation selector; match on the base character.
+      const base = (list.symbol ?? '').replace(/\uFE0F/g, '')
+      const icon = EMOJI_TO_ICON[base]
+      return icon ? { ...list, symbol: icon } : list
+    }),
   }
 }

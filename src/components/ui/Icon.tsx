@@ -48,6 +48,35 @@ const paths: Record<string, string> = {
   checklist: 'M4.5 7l1.7 1.7 3.3-3.3M4.5 17l1.7 1.7 3.3-3.3M12.5 7.5h7M12.5 17.5h7',
   grid: 'M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z',
 
+  /* Symbols a list can wear, drawn to the same rules as the rest. */
+  clipboard:
+    'M9 4.5h6a.5.5 0 01.5.5v1.6a.5.5 0 01-.5.5H9a.5.5 0 01-.5-.5V5a.5.5 0 01.5-.5z' +
+    'M8.5 6H6.5a1 1 0 00-1 1v12.5a1 1 0 001 1h11a1 1 0 001-1V7a1 1 0 00-1-1h-2',
+  briefcase:
+    'M4.5 8.5h15a1 1 0 011 1v8a1 1 0 01-1 1h-15a1 1 0 01-1-1v-8a1 1 0 011-1z' +
+    'M9 8.5v-2a1 1 0 011-1h4a1 1 0 011 1v2',
+  home: 'M4 10.5L12 4.2l8 6.3V19a1 1 0 01-1 1H5a1 1 0 01-1-1zM9.8 20v-5h4.4v5',
+  cart:
+    'M3 5.5h2.3l2.5 9.5h9.3l2-6.5H6.3' +
+    'M9.6 19a1.3 1.3 0 11-2.6 0 1.3 1.3 0 012.6 0M18 19a1.3 1.3 0 11-2.6 0 1.3 1.3 0 012.6 0',
+  target:
+    'M12 20.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17M12 15.8a3.8 3.8 0 100-7.6 3.8 3.8 0 000 7.6M12 12h.01',
+  plane: 'M21 3.5L3.5 11l7 3 3 7zM10.5 14L21 3.5',
+  book: 'M12 6.6S10 4.9 4.5 4.9v12.6c5.5 0 7.5 1.6 7.5 1.6s2-1.6 7.5-1.6V4.9C14 4.9 12 6.6 12 6.6zM12 6.6v13.5',
+  bulb:
+    'M9.5 17.5h5M10.3 20.5h3.4' +
+    'M12 3.5a5.8 5.8 0 013.4 10.5c-.6.4-.9 1-.9 1.7h-5c0-.7-.3-1.3-.9-1.7A5.8 5.8 0 0112 3.5z',
+  dumbbell: 'M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10',
+  gift:
+    'M3.5 8.5h17v3.5h-17zM5 12h14v7a1 1 0 01-1 1H6a1 1 0 01-1-1zM12 8.5V20' +
+    'M9 8.5a2 2 0 113-2.6 2 2 0 113 2.6',
+  heart:
+    'M12 19.8l-1.2-1.1C6.3 14.6 3.5 12 3.5 8.9A4.4 4.4 0 018 4.5c1.6 0 3.1.7 4 2' +
+    ' .9-1.3 2.4-2 4-2a4.4 4.4 0 014.5 4.4c0 3.1-2.8 5.7-7.3 9.8z',
+  music:
+    'M9.5 17.5V5.5l9.5-2v12' +
+    'M9.5 17.5a2.6 2.6 0 11-5.2 0 2.6 2.6 0 015.2 0M19 15.5a2.6 2.6 0 11-5.2 0 2.6 2.6 0 015.2 0',
+
   /*
    * Settings is two sliders rather than a cog. A cog simplified far enough to
    * survive 13px becomes a ring with radial ticks, which is the sun icon; this
@@ -60,6 +89,21 @@ const paths: Record<string, string> = {
 }
 
 export type IconName = keyof typeof paths
+
+/**
+ * Whether a stored string names an icon. A list's symbol may be an icon name
+ * or, for anything saved before the set existed, an emoji — this tells the two
+ * apart so both keep rendering.
+ */
+export function isIconName(value: string | undefined): boolean {
+  return !!value && Object.prototype.hasOwnProperty.call(paths, value)
+}
+
+/** The glyphs offered as list symbols, in picker order. */
+export const LIST_SYMBOLS: string[] = [
+  'clipboard', 'inbox', 'briefcase', 'home', 'cart', 'target',
+  'plane', 'book', 'bulb', 'dumbbell', 'gift', 'heart', 'music', 'star',
+]
 
 export function Icon({
   name,

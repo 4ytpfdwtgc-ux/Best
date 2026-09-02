@@ -6,7 +6,7 @@ import { addDays, nowISO, todayISO } from '../lib/date'
 import { emptyBlock } from '../lib/blocks'
 import { uid } from '../lib/id'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 /** Ids of the built-in properties, referenced by the seeded views. */
 export const PROP = {
@@ -110,10 +110,10 @@ export function createInitialState(): AppState {
   const now = nowISO()
 
   const lists: ReminderList[] = [
-    { id: 'list_inbox', name: 'Inbox', tint: 'gray', symbol: '📥', sortIndex: 0, groupId: null },
-    { id: 'list_work', name: 'Work', tint: 'orange', symbol: '💼', sortIndex: 1, groupId: null },
-    { id: 'list_home', name: 'Home', tint: 'green', symbol: '🏡', sortIndex: 2, groupId: null },
-    { id: 'list_shop', name: 'Groceries', tint: 'pink', symbol: '🛒', sortIndex: 3, groupId: null },
+    { id: 'list_inbox', name: 'Inbox', tint: 'gray', symbol: 'inbox', sortIndex: 0, groupId: null },
+    { id: 'list_work', name: 'Work', tint: 'orange', symbol: 'briefcase', sortIndex: 1, groupId: null },
+    { id: 'list_home', name: 'Home', tint: 'green', symbol: 'home', sortIndex: 2, groupId: null },
+    { id: 'list_shop', name: 'Groceries', tint: 'pink', symbol: 'cart', sortIndex: 3, groupId: null },
   ]
 
   const tags: Tag[] = [

@@ -76,7 +76,8 @@ absolute ones would resolve to the domain root and break the installed app.
 - Status and the completion checkbox are two views of one fact, so dragging a
   card to Done ticks it, and ticking it moves the card.
 - Still a task list underneath: due date and time, alerts, priority, flags,
-  subtasks, tags, and smart lists (Today, Scheduled, All, Flagged).
+  subtasks, tags, and smart lists (Today, Scheduled, All, Flagged). Lists carry
+  a colour and a symbol chosen from the icon set.
 - Repeating tasks roll their due date forward when completed instead of being
   struck out.
 - "Schedule" turns a task into a calendar event in one click.
@@ -223,9 +224,11 @@ rich-text model to keep in sync.
 ### Saved data
 
 The schema is versioned. State written by an older build is migrated on load
-rather than discarded — `state/migrate.ts` turns the previous markdown note
-bodies into blocks and gives every task the property bag — and the upgraded
-state is written straight back, so a migration runs once.
+rather than discarded, and the upgraded state is written straight back so a
+migration runs once. `state/migrate.ts` turns the previous markdown note bodies
+into blocks, gives every task the property bag, and converts list symbols from
+the emoji they used to be into icon names. A symbol it does not recognise is
+left alone — an emoji still renders, so nothing chosen elsewhere is lost.
 
 Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get

@@ -1,7 +1,7 @@
 import { useApp } from '../../state/store'
 import { countForList, countForSmartList, countForTag } from '../../state/selectors'
 import { deleteList, deleteTag, setReminderSelection } from '../../state/actions'
-import { Icon } from '../ui/Icon'
+import { Icon, isIconName } from '../ui/Icon'
 import type { ReminderList, SmartListId } from '../../types'
 
 const SMART: { id: SmartListId; label: string; icon: string; tint: string }[] = [
@@ -59,7 +59,9 @@ export function RemindersSidebar({
                 }
               }}
             >
-              <span className="side-item__glyph">{list.symbol}</span>
+              <span className="side-item__glyph">
+                {isIconName(list.symbol) ? <Icon name={list.symbol} size={15} /> : list.symbol}
+              </span>
               <span className="side-item__name">{list.name}</span>
               <span className="side-item__count">{countForList(state, list.id)}</span>
               <span
