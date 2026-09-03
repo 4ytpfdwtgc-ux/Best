@@ -218,6 +218,7 @@ export type BlockType =
   | 'divider'
   | 'code'
   | 'image'
+  | 'link'
 
 /**
  * A block of note content. Blocks are stored flat with an `indent` level
@@ -247,6 +248,8 @@ export interface Block {
   /** `image` only: intrinsic size, so the page holds its shape before it loads. */
   imageWidth?: number
   imageHeight?: number
+  /** `link` only: the destination. `text` is the card's title. */
+  url?: string
 }
 
 export interface Note {

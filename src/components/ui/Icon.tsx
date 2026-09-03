@@ -19,6 +19,7 @@ const paths: Record<string, string> = {
   chevronRight: 'M9.5 5.5L16 12l-6.5 6.5',
   chevronDown: 'M5.5 9.5L12 16l6.5-6.5',
   arrowRight: 'M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5',
+  arrowUpRight: 'M7 17L17 7M8.5 7H17v8.5',
   ellipsis: 'M6 12h.01M12 12h.01M18 12h.01',
 
   /* Objects */

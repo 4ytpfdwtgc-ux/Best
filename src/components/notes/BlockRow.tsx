@@ -4,6 +4,7 @@ import { hasChildren, orderedIndex } from '../../lib/blocks'
 import { decorateInline } from '../../lib/inline'
 import { Icon } from '../ui/Icon'
 import { ImageBlock } from './ImageBlock'
+import { LinkBlock } from './LinkBlock'
 
 /**
  * One block. The editable element holds plain text; inline markers are styled
@@ -26,6 +27,8 @@ export function BlockRow({
   onPickImage,
   onClearImageError,
   onPasteImages,
+  onPasteURL,
+  onSetURL,
   imageBusy,
   imageError,
 }: {
@@ -47,6 +50,10 @@ export function BlockRow({
   onClearImageError: () => void
   /** Pictures pasted into this block's text. */
   onPasteImages: (files: File[]) => void
+  /** A pasted address, when the block was empty. Returns false to paste as text. */
+  onPasteURL: (url: string) => boolean
+  /** `link` only. */
+  onSetURL: (url: string) => void
   imageBusy: boolean
   imageError?: string
 }) {
@@ -95,7 +102,11 @@ export function BlockRow({
           onPasteImages(files)
           return
         }
-        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+        // An address pasted into an empty block becomes a card, the way iOS
+        // does it. Pasted into writing it stays writing.
+        const text = e.clipboardData.getData('text/plain')
+        if (onPasteURL(text)) return
+        document.execCommand('insertText', false, text)
       }}
     />
   )
@@ -177,7 +188,14 @@ export function BlockRow({
           />
         )}
 
-        {block.type === 'divider' ? <hr className="blk__divider" /> : editable}
+        {/* A card carries the editable itself, as its title. */}
+        {block.type === 'link' ? (
+          <LinkBlock block={block} title={editable} onSetURL={onSetURL} />
+        ) : block.type === 'divider' ? (
+          <hr className="blk__divider" />
+        ) : (
+          editable
+        )}
       </div>
     </div>
   )
@@ -197,6 +215,7 @@ function placeholderFor(block: Block, active: boolean): string {
     case 'callout': return 'Write something…'
     case 'code': return 'Code'
     case 'image': return active ? 'Write a caption…' : ''
+    case 'link': return 'Untitled link'
     default: return active ? "Type '/' for commands" : ''
   }
 }

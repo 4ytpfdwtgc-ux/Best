@@ -36,6 +36,7 @@ export const BLOCK_MENU: {
   { type: 'divider', label: 'Divider', hint: 'Visually divide blocks.', keywords: ['divider', 'line', 'separator', 'hr'], glyph: '–' },
   { type: 'code', label: 'Code', hint: 'Capture a code snippet.', keywords: ['code', 'snippet', 'monospace'], glyph: '{}' },
   { type: 'image', label: 'Picture', hint: 'Add a photo or an image file.', keywords: ['image', 'picture', 'photo', 'img', 'camera', 'upload'], glyph: '▣' },
+  { type: 'link', label: 'Link', hint: 'Save a web address as a card.', keywords: ['link', 'url', 'web', 'bookmark', 'address', 'site'], glyph: '↗' },
 ]
 
 export function blockLabel(type: BlockType): string {
@@ -126,6 +127,7 @@ export function blocksToMarkdown(blocks: Block[]): string {
         case 'callout': return `${pad}> ${b.icon ?? ''} ${b.text}`
         case 'divider': return `${pad}---`
         case 'image': return `${pad}![${b.text}](picture)`
+        case 'link': return `${pad}[${b.text}](${b.url ?? ''})`
         case 'code': return `${pad}\`\`\`\n${b.text}\n${pad}\`\`\``
         default: return `${pad}${b.text}`
       }

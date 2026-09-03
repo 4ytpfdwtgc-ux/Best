@@ -102,6 +102,10 @@ absolute ones would resolve to the domain root and break the installed app.
   files onto the page. On iPhone the picker offers the photo library and the
   camera. Several at once become several blocks, the block's own text is the
   caption, and tapping a picture opens it full-screen.
+- **Link cards**: paste a web address into an empty block and it becomes a card
+  — the site's icon, a title, and the site underneath — the way iOS does it.
+  `/link` adds one by hand. Tap the card to open it, tap its title to correct
+  it. An address pasted into writing stays writing.
 - **`/` opens the insert menu**, filtered as you type, driven by the arrow keys.
 - **Markdown shortcuts convert as you type**: `# `, `## `, `- `, `1. `, `[] `,
   `> `, ` ``` ` and `--- `.
@@ -258,7 +262,16 @@ is left exactly as it came. Deleting a block or a page does not delete its
 bytes, because a duplicated block shares the key — instead a sweep at launch
 drops every picture no page refers to any more.
 
-Two things follow from where they live. Pictures are on the device, not in the
+A link card is built from the address alone: the site, a title de-slugged from
+the last path segment, and the site's own `/favicon.ico`, which loads as an
+ordinary image and so is not subject to CORS. iOS reads a page's Open Graph
+tags because it fetches the page itself; a static site has no server to fetch
+through and a browser is refused by CORS on very nearly every site it would
+want to read. Hence the editable title, and a monogram on the site's own colour
+when it serves no icon. Only `http:` and `https:` ever reach an href — a
+`javascript:` address is refused and stays inert text.
+
+Two things follow from where pictures live. Pictures are on the device, not in the
 saved state, so they do not travel with an exported note or to another browser.
 And Safari can evict a site's storage after about a week of not being opened;
 adding the app to the Home screen is what stops that.

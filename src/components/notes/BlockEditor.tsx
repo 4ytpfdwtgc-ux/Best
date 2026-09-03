@@ -5,6 +5,7 @@ import {
 } from '../../lib/blocks'
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
 import { AssetError, putImage } from '../../lib/assets'
+import { linkTitleFromURL, normalizeURL } from '../../lib/links'
 import { toggleMark } from '../../lib/inline'
 import { setBlocks, updateNote } from '../../state/actions'
 import { Icon, isIconName } from '../ui/Icon'
@@ -363,6 +364,33 @@ export function BlockEditor({ note }: { note: Note }) {
     void addPictures(fresh, files)
   }
 
+  /* ---------------------------------------------------------------- */
+  /* Links                                                             */
+  /* ---------------------------------------------------------------- */
+
+  /** Give a card its destination, and a title to start from. */
+  function setLinkURL(block: Block, url: string) {
+    patchBlock(block.id, {
+      type: 'link',
+      url,
+      text: block.text || linkTitleFromURL(url),
+    })
+  }
+
+  /**
+   * An address pasted into an empty block becomes a card. Pasted into writing
+   * it stays writing, so a URL can still be quoted mid-sentence.
+   */
+  function pasteURL(block: Block, pasted: string): boolean {
+    if (block.text || (block.type !== 'text' && block.type !== 'link')) return false
+    const url = normalizeURL(pasted)
+    if (!url) return false
+    setLinkURL(block, url)
+    // The caret belongs in the title, which is the one thing worth editing.
+    focusBlock(block.id)
+    return true
+  }
+
   /** Files dropped on the page land after whichever block they were dropped on. */
   function dropPictures(e: React.DragEvent) {
     const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'))
@@ -462,6 +490,8 @@ export function BlockEditor({ note }: { note: Note }) {
                 onPickImage={(files) => void addPictures(block, files)}
                 onClearImageError={() => clearImageError(block.id)}
                 onPasteImages={(files) => pastePictures(block, files)}
+                onPasteURL={(pasted) => pasteURL(block, pasted)}
+                onSetURL={(url) => setLinkURL(block, url)}
                 imageBusy={busyBlocks.has(block.id)}
                 imageError={imageErrors[block.id]}
               />
