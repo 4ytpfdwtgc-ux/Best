@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useApp } from './state/store'
+import { getState, useApp } from './state/store'
+import { referencedAssetIds } from './state/selectors'
+import { sweepOrphans } from './lib/assets'
 import { setModule } from './state/actions'
 import { useIsPhone } from './lib/useMediaQuery'
 import { applyCapture } from './state/capture'
@@ -37,6 +39,15 @@ export default function App() {
     const message = applyCapture(window.location.search)
     window.history.replaceState({}, '', window.location.pathname + window.location.hash)
     if (message) setToast(message)
+  }, [])
+
+  /*
+   * Deleting a block or a page leaves its pictures behind, and nothing smaller
+   * than the whole page list can tell an orphan from one a duplicated block
+   * still shares. Reclaim them once, at launch, rather than eagerly.
+   */
+  useEffect(() => {
+    void sweepOrphans(referencedAssetIds(getState()))
   }, [])
 
   useEffect(() => {

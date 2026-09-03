@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp, resetStore } from '../state/store'
 import { setPrefs } from '../state/actions'
 import { captureUrlTemplate } from '../state/capture'
@@ -6,6 +6,7 @@ import { buildICS } from '../lib/ics'
 import { shareOrDownload } from '../lib/deliver'
 import { Row, Sheet, Switch, TintPicker } from './ui/primitives'
 import { Icon } from './ui/Icon'
+import { formatBytes, usage } from '../lib/assets'
 import type { ThemeSetting } from '../types'
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
@@ -105,6 +106,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             label="Show completed reminders"
           />
         </Row>
+        <Row label="Pictures on this device">
+          <PictureUsage />
+        </Row>
         <Row label="Sort notes by">
           <select
             className="select input--sm"
@@ -172,5 +176,27 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
         </ul>
       </section>
     </Sheet>
+  )
+}
+
+/**
+ * How much room the pictures take. Worth showing: they are the only thing here
+ * big enough to run into a storage limit, and they live on this device alone.
+ */
+function PictureUsage() {
+  const [stats, setStats] = useState<{ count: number; bytes: number } | null>(null)
+
+  useEffect(() => {
+    let live = true
+    usage().then((found) => live && setStats(found))
+    return () => void (live = false)
+  }, [])
+
+  if (!stats) return <span className="row__note">Counting…</span>
+  if (!stats.count) return <span className="row__note">None yet</span>
+  return (
+    <span className="row__note">
+      {stats.count} {stats.count === 1 ? 'picture' : 'pictures'} · {formatBytes(stats.bytes)}
+    </span>
   )
 }

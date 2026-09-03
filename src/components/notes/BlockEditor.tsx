@@ -4,6 +4,7 @@ import {
   emptyBlock, hiddenBlockIds, LIST_TYPES, matchShortcut,
 } from '../../lib/blocks'
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
+import { AssetError, putImage } from '../../lib/assets'
 import { toggleMark } from '../../lib/inline'
 import { setBlocks, updateNote } from '../../state/actions'
 import { Icon, isIconName } from '../ui/Icon'
@@ -25,6 +26,11 @@ export function BlockEditor({ note }: { note: Note }) {
   const [menu, setMenu] = useState<{ blockId: string; top: number; left: number } | null>(null)
   const [iconAnchor, setIconAnchor] = useState<DOMRect | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  // Pictures are read, shrunk and stored off the main thread of the edit, so a
+  // block has to be able to say it is working and that it failed.
+  const [busyBlocks, setBusyBlocks] = useState<ReadonlySet<string>>(new Set())
+  const [imageErrors, setImageErrors] = useState<Record<string, string>>({})
+  const [dropping, setDropping] = useState(false)
   // The pointer handlers read the live value here; `drag` only drives rendering.
   const dragRef = useRef<DragState | null>(null)
   const blocksRef = useRef(note.blocks)
@@ -273,6 +279,104 @@ export function BlockEditor({ note }: { note: Note }) {
     window.addEventListener('pointercancel', onUp)
   }
 
+  /* ---------------------------------------------------------------- */
+  /* Pictures                                                          */
+  /* ---------------------------------------------------------------- */
+
+  const setBusy = useCallback((id: string, busy: boolean) => {
+    setBusyBlocks((current) => {
+      if (current.has(id) === busy) return current
+      const next = new Set(current)
+      if (busy) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const clearImageError = useCallback(
+    (id: string) =>
+      setImageErrors((current) => {
+        if (!(id in current)) return current
+        const next = { ...current }
+        delete next[id]
+        return next
+      }),
+    [],
+  )
+
+  /**
+   * Put pictures into the page. The first fills `target` and the rest become
+   * their own blocks after it, so picking several photos at once reads as one
+   * action rather than needing a slash command each.
+   *
+   * A replaced picture's bytes are not deleted here: a duplicated block shares
+   * the key, so only a sweep that can see the whole page list may reclaim them.
+   */
+  async function addPictures(target: Block, files: File[]) {
+    const pictures = files.filter((f) => f.type.startsWith('image/'))
+    if (!pictures.length) {
+      setImageErrors((c) => ({ ...c, [target.id]: 'That file is not a picture.' }))
+      return
+    }
+
+    clearImageError(target.id)
+    setBusy(target.id, true)
+    let anchorId = target.id
+
+    try {
+      for (const [i, file] of pictures.entries()) {
+        const stored = await putImage(file)
+        const patch: Partial<Block> = {
+          type: 'image',
+          assetId: stored.id,
+          imageWidth: stored.width,
+          imageHeight: stored.height,
+        }
+        if (i === 0) {
+          patchBlock(target.id, patch)
+        } else {
+          const fresh = { ...emptyBlock('image', target.indent), ...patch }
+          const next = [...blocksRef.current]
+          next.splice(next.findIndex((b) => b.id === anchorId) + 1, 0, fresh)
+          commit(next)
+          anchorId = fresh.id
+        }
+      }
+    } catch (error) {
+      setImageErrors((c) => ({
+        ...c,
+        [target.id]: error instanceof AssetError ? error.message : 'That picture could not be added.',
+      }))
+    } finally {
+      setBusy(target.id, false)
+    }
+  }
+
+  /** Pictures pasted into a block: they go after it rather than over its text. */
+  function pastePictures(block: Block, files: File[]) {
+    // An empty block has nothing worth keeping, so the picture lands in it.
+    if (!block.text && block.type === 'text') return void addPictures(block, files)
+    const fresh = emptyBlock('image', block.indent)
+    const next = [...blocksRef.current]
+    next.splice(next.findIndex((b) => b.id === block.id) + 1, 0, fresh)
+    commit(next)
+    void addPictures(fresh, files)
+  }
+
+  /** Files dropped on the page land after whichever block they were dropped on. */
+  function dropPictures(e: React.DragEvent) {
+    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'))
+    setDropping(false)
+    if (!files.length) return
+    e.preventDefault()
+
+    const over = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-block-id]')
+    const blocks = blocksRef.current
+    const onto = blocks.find((b) => b.id === over?.dataset.blockId) ?? blocks[blocks.length - 1]
+    if (!onto) return
+    pastePictures(onto, files)
+  }
+
   function applyDrop(id: string, state: DragState) {
     const blocks = blocksRef.current
     const from = blocks.findIndex((b) => b.id === id)
@@ -323,7 +427,18 @@ export function BlockEditor({ note }: { note: Note }) {
         />
       </div>
 
-      <div className="page__blocks">
+      <div
+        className={`page__blocks${dropping ? ' is-dropping' : ''}`}
+        onDragOver={(e) => {
+          if (![...e.dataTransfer.types].includes('Files')) return
+          e.preventDefault()
+          setDropping(true)
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false)
+        }}
+        onDrop={dropPictures}
+      >
         {visible.map((block) => {
           const index = note.blocks.findIndex((b) => b.id === block.id)
           const showLine = drag && drag.overIndex === index && drag.id !== block.id
@@ -344,6 +459,11 @@ export function BlockEditor({ note }: { note: Note }) {
                 onInsertAfter={() => insertAfter(block)}
                 onOpenMenu={(rect) => setMenu({ blockId: block.id, top: rect.bottom + 6, left: rect.left })}
                 onDragStart={(e) => startDrag(e, block)}
+                onPickImage={(files) => void addPictures(block, files)}
+                onClearImageError={() => clearImageError(block.id)}
+                onPasteImages={(files) => pastePictures(block, files)}
+                imageBusy={busyBlocks.has(block.id)}
+                imageError={imageErrors[block.id]}
               />
               {showLine && drag!.after && <div className="blk__dropline" />}
             </div>

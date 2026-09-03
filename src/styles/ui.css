@@ -245,6 +245,7 @@
 }
 .row__label { color: var(--text-secondary); font-size: 14px; }
 .row__control { display: flex; align-items: center; gap: 8px; }
+.row__note { color: var(--text-tertiary); font-size: 13px; }
 
 /* Colour picker --------------------------------------------------- */
 

@@ -98,6 +98,10 @@ absolute ones would resolve to the domain root and break the installed app.
 - Pages have an emoji icon and a large title, and a body made of **blocks**:
   text, three heading levels, to-dos, bulleted, numbered and toggle lists,
   quotes, callouts, dividers and code.
+- **Pictures**: `/picture` adds one, or paste a copied image, or drag image
+  files onto the page. On iPhone the picker offers the photo library and the
+  camera. Several at once become several blocks, the block's own text is the
+  caption, and tapping a picture opens it full-screen.
 - **`/` opens the insert menu**, filtered as you type, driven by the arrow keys.
 - **Markdown shortcuts convert as you type**: `# `, `## `, `- `, `1. `, `[] `,
   `> `, ` ``` ` and `--- `.
@@ -244,10 +248,25 @@ Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get
 from serializing `Date` objects.
 
+Pictures are the one exception to "everything is one JSON blob". localStorage
+caps out around 5MB — less than a single photo off an iPhone, before base64
+inflates it by a third — so `lib/assets.ts` keeps them in IndexedDB as binary
+and a block stores only the key. A picture over 1600px on its long edge is
+scaled down and re-encoded on the way in; a PNG stays a PNG so it keeps its
+transparency, a GIF or an SVG is stored untouched, and anything already small
+is left exactly as it came. Deleting a block or a page does not delete its
+bytes, because a duplicated block shares the key — instead a sweep at launch
+drops every picture no page refers to any more.
+
+Two things follow from where they live. Pictures are on the device, not in the
+saved state, so they do not travel with an exported note or to another browser.
+And Safari can evict a site's storage after about a week of not being opened;
+adding the app to the Home screen is what stops that.
+
 ## Not yet built
 
 Sync, notifications that actually fire, shared lists, location-based alerts,
-attachments, drag-to-reschedule, swipe gestures, and undo.
+file attachments other than pictures, drag-to-reschedule, and undo.
 
 Two-way calendar sync and real Siri intents are not on this list because they
 are not reachable from a web app at all: both need either a server (a subscribed

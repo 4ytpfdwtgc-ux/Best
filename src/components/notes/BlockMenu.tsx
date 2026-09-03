@@ -47,10 +47,14 @@ export function BlockMenu({
         Delete
       </button>
 
+      {block.type !== 'image' && (
+        <>
       <div className="menu__sep" />
       <div className="menu__label">Turn into</div>
       <div className="blockmenu__grid">
-        {BLOCK_MENU.filter((b) => b.type !== 'divider').map((item) => (
+        {/* A picture cannot be conjured from text, and turning one into text
+            would drop it silently, so it is not offered either way. */}
+        {BLOCK_MENU.filter((b) => b.type !== 'divider' && b.type !== 'image').map((item) => (
           <button
             key={item.type}
             type="button"
@@ -64,6 +68,8 @@ export function BlockMenu({
           </button>
         ))}
       </div>
+        </>
+      )}
 
       {block.type === 'callout' && (
         <>

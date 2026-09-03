@@ -212,6 +212,15 @@ export function visibleNotes(s: AppState, query = ''): Note[] {
     })
 }
 
+/** Every picture any page still refers to, trashed and archived ones included. */
+export function referencedAssetIds(s: AppState): Set<ID> {
+  const ids = new Set<ID>()
+  for (const note of s.notes) {
+    for (const block of note.blocks) if (block.assetId) ids.add(block.assetId)
+  }
+  return ids
+}
+
 export function noteSnippet(note: Note): string {
   const text = blocksToText(note.blocks).trim()
   // When the title came from the first block, do not repeat it in the preview.

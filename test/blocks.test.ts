@@ -139,3 +139,10 @@ test('toggling an already-marked selection unwraps it', () => {
 test('toggling an empty selection changes nothing', () => {
   assert.deepEqual(toggleMark('abc', 1, 1, '**'), { text: 'abc', start: 1, end: 1 })
 })
+
+test('a picture survives a copy out as a markdown image', () => {
+  const picture = { ...emptyBlock('image'), text: 'Ferry at dusk', assetId: 'img_1' }
+  assert.equal(blocksToMarkdown([picture]), '![Ferry at dusk](picture)')
+  // Its caption is the block's words, so search and previews can still see it.
+  assert.equal(blocksToText([picture]), 'Ferry at dusk')
+})

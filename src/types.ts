@@ -217,6 +217,7 @@ export type BlockType =
   | 'callout'
   | 'divider'
   | 'code'
+  | 'image'
 
 /**
  * A block of note content. Blocks are stored flat with an `indent` level
@@ -238,6 +239,14 @@ export interface Block {
   icon?: string
   /** `code` only. */
   language?: string
+  /**
+   * `image` only: the key of the picture in the asset store. The picture
+   * itself lives in IndexedDB, never in the saved state. `text` is its caption.
+   */
+  assetId?: ID
+  /** `image` only: intrinsic size, so the page holds its shape before it loads. */
+  imageWidth?: number
+  imageHeight?: number
 }
 
 export interface Note {

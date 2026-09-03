@@ -13,6 +13,8 @@ const paths: Record<string, string> = {
   plus: 'M12 5.5v13M5.5 12h13',
   minus: 'M5.5 12h13',
   close: 'M6.5 6.5l11 11M17.5 6.5l-11 11',
+  image: 'M4.5 5.5h15a1 1 0 011 1v11a1 1 0 01-1 1h-15a1 1 0 01-1-1v-11a1 1 0 011-1zM3.5 15.5l4.5-4 4 3.5 3.5-3 5 4.5M15 9.5h.01',
+  warning: 'M12 4.5l8.5 15h-17zM12 10.5v4M12 17.5h.01',
   chevronLeft: 'M14.5 5.5L8 12l6.5 6.5',
   chevronRight: 'M9.5 5.5L16 12l-6.5 6.5',
   chevronDown: 'M5.5 9.5L12 16l6.5-6.5',

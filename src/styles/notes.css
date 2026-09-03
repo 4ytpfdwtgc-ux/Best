@@ -293,6 +293,107 @@
   tab-size: 2;
 }
 
+/* Pictures --------------------------------------------------------- */
+
+/* The picture stacks above its caption rather than sitting beside it. */
+.blk--image .blk__body { flex-direction: column; gap: 4px; }
+.blk--image .blk__text {
+  font-size: 13.5px;
+  color: var(--text-tertiary);
+  width: 100%;
+}
+
+.img { width: 100%; }
+.img__frame {
+  position: relative;
+  max-width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-code);
+}
+.img__pic {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: zoom-in;
+  /* A tall picture must not push the caption off the screen. */
+  max-height: 62vh;
+  object-fit: contain;
+}
+
+/* Stands in for the picture until it has been read out of storage. */
+.img__pending {
+  width: 100%;
+  min-height: 96px;
+  height: 100%;
+  background: linear-gradient(100deg, var(--bg-code) 40%, var(--bg-hover) 50%, var(--bg-code) 60%);
+  background-size: 300% 100%;
+  animation: img-shimmer 1.1s linear infinite;
+}
+.img__pending--over { position: absolute; inset: 0; opacity: 0.75; }
+@keyframes img-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .img__pending { animation: none; }
+}
+
+.img__drop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px dashed var(--line-strong, var(--line));
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  text-align: left;
+  background: var(--bg-code);
+}
+.img__drop:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.img__drop:disabled { opacity: 0.6; }
+.img__drop.is-error { color: var(--tint-red); border-color: var(--tint-red); }
+
+/* The whole page answers a dragged-in file, not just one block. */
+.page__blocks.is-dropping {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(15, 15, 15, 0.88);
+  cursor: zoom-out;
+}
+.lightbox__pic {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius);
+  cursor: default;
+}
+.lightbox__close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+.lightbox__close:hover { background: rgba(255, 255, 255, 0.26); }
+
 .blk--divider { padding: 6px 2px; }
 .blk__divider {
   width: 100%;

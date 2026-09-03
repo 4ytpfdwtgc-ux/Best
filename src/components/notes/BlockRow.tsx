@@ -3,6 +3,7 @@ import type { Block } from '../../types'
 import { hasChildren, orderedIndex } from '../../lib/blocks'
 import { decorateInline } from '../../lib/inline'
 import { Icon } from '../ui/Icon'
+import { ImageBlock } from './ImageBlock'
 
 /**
  * One block. The editable element holds plain text; inline markers are styled
@@ -22,6 +23,11 @@ export function BlockRow({
   onInsertAfter,
   onOpenMenu,
   onDragStart,
+  onPickImage,
+  onClearImageError,
+  onPasteImages,
+  imageBusy,
+  imageError,
 }: {
   block: Block
   index: number
@@ -36,6 +42,13 @@ export function BlockRow({
   onInsertAfter: () => void
   onOpenMenu: (anchor: DOMRect) => void
   onDragStart: (e: React.PointerEvent) => void
+  /** `image` only: pictures chosen for this block. */
+  onPickImage: (files: File[]) => void
+  onClearImageError: () => void
+  /** Pictures pasted into this block's text. */
+  onPasteImages: (files: File[]) => void
+  imageBusy: boolean
+  imageError?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLButtonElement>(null)
@@ -73,11 +86,16 @@ export function BlockRow({
       onInput={(e) => onChange(e.currentTarget.textContent ?? '')}
       onKeyDown={(e) => onKeyDown(e, e.currentTarget)}
       onFocus={(e) => onFocus(e.currentTarget)}
-      // Paste as plain text so pasted markup cannot smuggle in nodes.
       onPaste={(e) => {
+        // A copied picture becomes a picture; everything else pastes as plain
+        // text, so pasted markup cannot smuggle nodes into the editable.
+        const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
         e.preventDefault()
-        const text = e.clipboardData.getData('text/plain')
-        document.execCommand('insertText', false, text)
+        if (files.length) {
+          onPasteImages(files)
+          return
+        }
+        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
       }}
     />
   )
@@ -149,6 +167,16 @@ export function BlockRow({
           <span className="blk__callout-icon" contentEditable={false}>{block.icon ?? '💡'}</span>
         )}
 
+        {block.type === 'image' && (
+          <ImageBlock
+            block={block}
+            busy={imageBusy}
+            error={imageError}
+            onPick={onPickImage}
+            onRetry={onClearImageError}
+          />
+        )}
+
         {block.type === 'divider' ? <hr className="blk__divider" /> : editable}
       </div>
     </div>
@@ -168,6 +196,7 @@ function placeholderFor(block: Block, active: boolean): string {
     case 'quote': return 'Empty quote'
     case 'callout': return 'Write something…'
     case 'code': return 'Code'
+    case 'image': return active ? 'Write a caption…' : ''
     default: return active ? "Type '/' for commands" : ''
   }
 }
