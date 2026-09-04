@@ -381,3 +381,47 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Dragging an event -------------------------------------------------- */
+
+.ev { touch-action: pan-y; cursor: grab; }
+/* Lifted clear of the others, and following the pointer. */
+.ev.is-dragging {
+  z-index: 5;
+  cursor: grabbing;
+  opacity: 0.92;
+  box-shadow: var(--shadow-menu, 0 8px 20px rgba(0, 0, 0, 0.18));
+  transform: scale(1.01);
+}
+
+/* The bottom edge, for dragging the end time. */
+.ev__grip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.ev__grip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 20px;
+  height: 2px;
+  margin-left: -10px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+}
+.ev:hover .ev__grip::after { opacity: 0.5; }
+
+/* A chip that can be dragged to another day, and the day it would land on. */
+.chip--draggable { cursor: grab; touch-action: pan-y; }
+.month__cell.is-droptarget {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--bg-hover);
+}

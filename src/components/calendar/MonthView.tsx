@@ -1,6 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { AppState, EventOccurrence } from '../../types'
 import { occurrencesOnDay } from '../../state/selectors'
+import { moveEvent } from '../../lib/reschedule'
+import { updateEvent } from '../../state/actions'
+import { diffDays } from '../../lib/date'
 import {
   formatTime, fromISODate, isSameMonth, monthGrid, startOfMonth, todayISO, weekdayOf,
 } from '../../lib/date'
@@ -36,6 +39,77 @@ export function MonthView({
     [weekStartsOn],
   )
 
+  /*
+   * Dragging a chip from one day to another. A month cell has no time in it,
+   * so only the date moves: the event keeps the time it already had.
+   */
+  const dragRef = useRef<{ id: string; from: string } | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
+  // Read from the pointerup handler, which would otherwise see a stale value.
+  const dragOverRef = useRef<string | null>(null)
+  dragOverRef.current = dragOver
+  const movedRef = useRef(false)
+
+  function startChipDrag(e: React.PointerEvent, occ: EventOccurrence) {
+    if (e.button !== 0) return
+    const startX = e.clientX
+    const startY = e.clientY
+    const touch = e.pointerType === 'touch'
+    let engaged = false
+    let holdTimer: number | undefined
+
+    const engage = () => {
+      engaged = true
+      movedRef.current = true
+      dragRef.current = { id: occ.event.id, from: occ.date }
+    }
+
+    // A finger holds first; the month grid scrolls under it otherwise.
+    if (touch) holdTimer = window.setTimeout(engage, 350)
+
+    const onMove = (ev: PointerEvent) => {
+      if (!engaged) {
+        const far = Math.abs(ev.clientX - startX) > 4 || Math.abs(ev.clientY - startY) > 4
+        if (touch) {
+          if (far) cleanup()
+          return
+        }
+        if (!far) return
+        engage()
+      }
+      const cell = document
+        .elementsFromPoint(ev.clientX, ev.clientY)
+        .find((el): el is HTMLElement => el instanceof HTMLElement && el.dataset.date !== undefined)
+      setDragOver(cell?.dataset.date ?? null)
+    }
+
+    const onUp = () => {
+      const current = dragRef.current
+      const target = dragOverRef.current
+      cleanup()
+      window.setTimeout(() => void (movedRef.current = false), 0)
+      if (!current || !target || target === current.from) return
+      const dayDelta = diffDays(current.from, target)
+      if (!dayDelta) return
+      // A repeating event's day belongs to its rule, not to one occurrence.
+      if (occ.event.recurrence) return
+      updateEvent(occ.event.id, moveEvent(occ.event, { minuteDelta: 0, dayDelta }))
+    }
+
+    const cleanup = () => {
+      window.clearTimeout(holdTimer)
+      dragRef.current = null
+      setDragOver(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', cleanup)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', cleanup)
+  }
+
   return (
     <div className={`month${compact ? ' month--compact' : ''}`}>
       <div className="month__weekdays">
@@ -61,10 +135,12 @@ export function MonthView({
                 (isSameMonth(day, month) ? '' : ' is-outside') +
                 (day === today ? ' is-today' : '') +
                 (day === state.calendarDate ? ' is-selected' : '') +
+                (dragOver === day ? ' is-droptarget' : '') +
                 (weekdayOf(day) === 0 || weekdayOf(day) === 6 ? ' is-weekend' : '')
               }
               onClick={() => onOpenDay(day)}
               onDoubleClick={() => onNewEvent(day)}
+              data-date={day}
               role="gridcell"
               tabIndex={0}
               aria-label={day}
@@ -111,9 +187,17 @@ export function MonthView({
                     <button
                       key={`e-${occ.event.id}-${occ.date}-${i}`}
                       type="button"
-                      className={`chip tint-${cal?.tint ?? 'blue'}${occ.event.allDay ? ' chip--allday' : ''}`}
+                      className={`chip tint-${cal?.tint ?? 'blue'}${occ.event.allDay ? ' chip--allday' : ''}${
+                        occ.event.recurrence ? '' : ' chip--draggable'
+                      }`}
+                      onPointerDown={(e) => {
+                        if (occ.event.recurrence) return
+                        e.stopPropagation()
+                        startChipDrag(e, occ)
+                      }}
                       onClick={(e) => {
                         e.stopPropagation()
+                        if (movedRef.current) return
                         onOpenEvent(occ.event.id)
                       }}
                       title={occ.event.title}

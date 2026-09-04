@@ -90,6 +90,15 @@ absolute ones would resolve to the domain root and break the installed app.
 - "Schedule" turns a task into a calendar event in one click.
 
 ### Calendar
+- **Drag to reschedule.** In the day and week grids an event is dragged to a
+  new time, across to another day, or by its bottom edge to change how long it
+  runs; in the month view a chip is dragged to another day and keeps its time.
+  Everything snaps to a quarter of an hour, the event previews where it would
+  land, and the change is written only on release. A finger has to hold for a
+  moment first, or the grid could never be scrolled.
+- A **repeating** event can be moved in time but not onto another day: its day
+  comes from its rule, and dragging one occurrence to Friday would silently
+  rewrite every other occurrence too.
 - Day, week, month and year views (`D` / `W` / `M` / `Y`), arrow keys to step,
   `⌘T` for today. On a phone the week view is dropped (seven columns are
   unreadable) and the month grid shows dots with a day agenda beneath it, the
