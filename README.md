@@ -96,6 +96,11 @@ absolute ones would resolve to the domain root and break the installed app.
   Everything snaps to a quarter of an hour, the event previews where it would
   land, and the change is written only on release. A finger has to hold for a
   moment first, or the grid could never be scrolled.
+- **Time zones**, opt-in per event. Without one an event floats: noon is noon
+  wherever you are, which is right for most of a personal calendar. Pinned to a
+  zone, it is stored in that zone's wall time and shown in yours — so a 9am
+  call in New York reads as 2pm in London, and moves on the clock when you
+  travel. The editor previews the conversion as you pick.
 - A **repeating** event can be moved in time but not onto another day: its day
   comes from its rule, and dragging one occurrence to Friday would silently
   rewrite every other occurrence too.
@@ -286,6 +291,17 @@ lost.
 Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get
 from serializing `Date` objects.
+
+An event may also carry an IANA `timeZone`, in which case its stored time is
+the wall time *there* and `lib/timezone.ts` converts it for whoever is looking.
+Offsets are read back out of `Intl` rather than from a table, so daylight
+saving is right on both sides of every changeover without shipping a zone
+database. A repeating event is expanded on its own dates and each occurrence
+converted afterwards — a weekly 9am in New York is 9am there every week, and
+only that order keeps it at the right local time either side of a changeover,
+since the two zones do not change on the same day. Exported, a zoned event is
+written as an absolute UTC instant: `TZID` would be more faithful but obliges
+the file to carry that zone's whole rule history as a VTIMEZONE block.
 
 Pictures and attached files are the one exception to "everything is one JSON
 blob". localStorage

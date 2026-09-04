@@ -2,7 +2,8 @@ import type {
   AppState, CalendarEvent, DatabaseView, EventOccurrence, FieldRef, ID, Note,
   PropertyDef, Reminder, ReminderSelection, TintName,
 } from '../types'
-import { addDays, diffDays, friendlyDate, minutesFromTime, todayISO } from '../lib/date'
+import { addDays, diffDays, friendlyDate, minutesFromTime, timeFromMinutes, todayISO } from '../lib/date'
+import { convertWallTime, deviceZone } from '../lib/timezone'
 import { occurrencesInRange } from '../lib/recurrence'
 import { noteTitle } from './actions'
 import { blocksToText } from '../lib/blocks'
@@ -147,18 +148,42 @@ export function occurrencesBetween(
   const visible = new Set(s.calendars.filter((c) => c.visible).map((c) => c.id))
   const out: EventOccurrence[] = []
 
+  const here = deviceZone()
+
   for (const event of s.events) {
     if (!visible.has(event.calendarId)) continue
     const span = Math.max(1, diffDays(event.startDate, event.endDate) + 1)
     // Widen the search window so multi-day events starting before the range appear.
     const searchStart = addDays(rangeStart, -(span - 1))
+    /*
+     * A zoned event is expanded on its own dates and then each occurrence is
+     * converted, rather than the event being converted once and expanded
+     * after. A weekly 9am in New York is 9am there every week, and only that
+     * order keeps it at the right local time either side of a daylight-saving
+     * change — on both sides, which do not fall on the same day.
+     */
+    const zoned = !!event.timeZone && !event.allDay && event.timeZone !== here
     for (const date of occurrencesInRange(event.startDate, event.recurrence, searchStart, rangeEnd)) {
+      const startMinutes = event.allDay ? 0 : minutesFromTime(event.startTime, 0)
+      const endMinutes = event.allDay
+        ? 24 * 60
+        : minutesFromTime(event.endTime, startMinutes + 60)
+
+      if (!zoned) {
+        out.push({ event, date, span, startMinutes, endMinutes })
+        continue
+      }
+
+      const local = convertWallTime(date, timeFromMinutes(startMinutes), event.timeZone!, here)
+      // Converting can move the day, which is exactly why it is worth doing.
+      if (local.date < rangeStart || local.date > rangeEnd) continue
+      const localStart = minutesFromTime(local.time, startMinutes)
       out.push({
         event,
-        date,
+        date: local.date,
         span,
-        startMinutes: event.allDay ? 0 : minutesFromTime(event.startTime, 0),
-        endMinutes: event.allDay ? 24 * 60 : minutesFromTime(event.endTime, minutesFromTime(event.startTime, 0) + 60),
+        startMinutes: localStart,
+        endMinutes: localStart + (endMinutes - startMinutes),
       })
     }
   }

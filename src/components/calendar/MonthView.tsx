@@ -5,7 +5,7 @@ import { moveEvent } from '../../lib/reschedule'
 import { updateEvent } from '../../state/actions'
 import { diffDays } from '../../lib/date'
 import {
-  formatTime, fromISODate, isSameMonth, monthGrid, startOfMonth, todayISO, weekdayOf,
+  formatTime, fromISODate, isSameMonth, monthGrid, startOfMonth, timeFromMinutes, todayISO, weekdayOf,
 } from '../../lib/date'
 
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -205,7 +205,7 @@ export function MonthView({
                       {occ.event.allDay ? null : <span className="chip__dot" />}
                       <span className="chip__text">
                         {!occ.event.allDay && occ.event.startTime
-                          ? `${formatTime(occ.event.startTime, state.prefs.use24HourTime)} `
+                          ? `${formatTime(timeFromMinutes(occ.startMinutes), state.prefs.use24HourTime)} `
                           : ''}
                         {continues ? '↳ ' : ''}
                         {occ.event.title || 'New Event'}

@@ -138,3 +138,40 @@ test('filenames are slugged and bounded', () => {
   assert.equal(icsFilename('  ???  '), 'event.ics')
   assert.ok(icsFilename('x'.repeat(120)).length <= 44)
 })
+
+test('an event with no zone stays a floating local time', () => {
+  const line = lines(buildICS([event()])).find((l) => l.startsWith('DTSTART'))
+  // No Z and no TZID: read in whatever zone the reader is in, which is what a
+  // "3pm wherever I am" event means.
+  assert.equal(line, 'DTSTART:20260901T130000')
+})
+
+test('an event pinned to a zone is written as an absolute instant', () => {
+  const zoned = event({
+    startDate: '2026-01-15', startTime: '09:00',
+    endDate: '2026-01-15', endTime: '10:00',
+    timeZone: 'America/New_York',
+  })
+  const out = lines(buildICS([zoned]))
+  // 9am in New York in January is 14:00 UTC.
+  assert.equal(out.find((l) => l.startsWith('DTSTART')), 'DTSTART:20260115T140000Z')
+  assert.equal(out.find((l) => l.startsWith('DTEND')), 'DTEND:20260115T150000Z')
+})
+
+test('the same wall time in summer writes a different instant', () => {
+  // Daylight saving, handled because the offset is read at the instant itself.
+  const zoned = event({
+    startDate: '2026-07-15', startTime: '09:00',
+    endDate: '2026-07-15', endTime: '10:00',
+    timeZone: 'America/New_York',
+  })
+  assert.equal(
+    lines(buildICS([zoned])).find((l) => l.startsWith('DTSTART')),
+    'DTSTART:20260715T130000Z',
+  )
+})
+
+test('an all-day event ignores a zone, as a date has no time to convert', () => {
+  const allDay = event({ allDay: true, timeZone: 'Asia/Tokyo' })
+  assert.match(lines(buildICS([allDay])).find((l) => l.startsWith('DTSTART')) ?? '', /VALUE=DATE/)
+})

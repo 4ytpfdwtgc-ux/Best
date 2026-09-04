@@ -1,10 +1,12 @@
 import type { CalendarEvent, Recurrence } from '../types.ts'
 import { addDays } from './date.ts'
+import { zonedToInstant } from './timezone.ts'
 
 /**
  * iCalendar (RFC 5545) output, so an event can be handed to iOS Calendar.
  *
- * Times are written as *floating* local values — no `Z`, no `TZID` — which is
+ * Times with no zone are written as *floating* local values — no `Z`, no
+ * `TZID` — which is
  * exactly what the app stores: a wall-clock time with no zone attached. A
  * floating time is displayed in the reader's own zone, so no VTIMEZONE block
  * has to be shipped along with it.
@@ -61,6 +63,11 @@ function dateTimeValue(iso: string, time: string | undefined): string {
   return `${dateValue(iso)}T${h.padStart(2, '0')}${m.padStart(2, '0')}00`
 }
 
+/** A zoned wall time as an absolute UTC value. */
+function utcValue(iso: string, time: string | undefined, zone: string): string {
+  return utcStamp(zonedToInstant(iso, time ?? '00:00', zone))
+}
+
 /** UTC stamp for DTSTAMP, which must be absolute. */
 function utcStamp(date = new Date()): string {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
@@ -88,6 +95,15 @@ function eventLines(event: CalendarEvent, stamp: string): string[] {
     lines.push(`DTSTART;VALUE=DATE:${dateValue(event.startDate)}`)
     // DTEND is exclusive for all-day events, so a one-day event ends tomorrow.
     lines.push(`DTEND;VALUE=DATE:${dateValue(addDays(event.endDate, 1))}`)
+  } else if (event.timeZone) {
+    /*
+     * An event pinned to a zone is written as UTC, which fixes the instant
+     * exactly and is read correctly everywhere. Writing TZID instead would be
+     * more faithful to the author's intent but obliges the file to carry a
+     * VTIMEZONE block with that zone's whole rule history.
+     */
+    lines.push(`DTSTART:${utcValue(event.startDate, event.startTime, event.timeZone)}`)
+    lines.push(`DTEND:${utcValue(event.endDate, event.endTime ?? event.startTime, event.timeZone)}`)
   } else {
     lines.push(`DTSTART:${dateTimeValue(event.startDate, event.startTime)}`)
     const endTime = event.endTime ?? event.startTime

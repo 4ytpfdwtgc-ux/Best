@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CalendarEvent, Recurrence } from '../../types'
 import { useApp } from '../../state/store'
 import { addEvent, deleteEvent, updateEvent } from '../../state/actions'
@@ -7,6 +7,8 @@ import { RecurrenceEditor } from '../ui/RecurrenceEditor'
 import { Icon } from '../ui/Icon'
 import { buildICS, icsFilename } from '../../lib/ics'
 import { shareOrDownload } from '../../lib/deliver'
+import { formatTime } from '../../lib/date'
+import { convertWallTime, deviceZone, knownZones, offsetLabel, zoneLabel } from '../../lib/timezone'
 
 const ALERTS = [
   { value: '', label: 'None' },
@@ -42,6 +44,13 @@ export function EventSheet({ draft, onClose }: { draft: EventDraft; onClose: () 
     existing?.alertMinutesBefore == null ? '' : String(existing.alertMinutesBefore),
   )
   const [recurrence, setRecurrence] = useState<Recurrence | undefined>(existing?.recurrence)
+  const [timeZone, setTimeZone] = useState(existing?.timeZone ?? '')
+  const here = deviceZone()
+  const zones = useMemo(() => {
+    const all = knownZones()
+    // The device's own zone first: it is much the most likely choice.
+    return [here, ...all.filter((z) => z !== here)]
+  }, [here])
 
   function save() {
     const safeEnd = endDate < startDate ? startDate : endDate
@@ -58,6 +67,7 @@ export function EventSheet({ draft, onClose }: { draft: EventDraft; onClose: () 
       url: url.trim() || undefined,
       alertMinutesBefore: alert === '' ? null : Number(alert),
       recurrence,
+      timeZone: allDay || !timeZone ? undefined : timeZone,
     }
     if (existing) updateEvent(existing.id, payload)
     else addEvent(payload)
@@ -138,6 +148,40 @@ export function EventSheet({ draft, onClose }: { draft: EventDraft; onClose: () 
           )}
         </Field>
       </div>
+
+      {!allDay && (
+        <Field label="Time zone">
+          <select
+            className="select"
+            value={timeZone}
+            onChange={(e) => setTimeZone(e.target.value)}
+            aria-label="Time zone"
+          >
+            <option value="">Same time wherever I am</option>
+            {zones.map((zone) => (
+              <option key={zone} value={zone}>
+                {zoneLabel(zone)} · {offsetLabel(new Date(`${startDate}T12:00:00Z`), zone)}
+                {zone === here ? ' · this device' : ''}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {!allDay && timeZone && timeZone !== here && (
+        <p className="settings__note">
+          {formatTime(startTime, state.prefs.use24HourTime)} in {zoneLabel(timeZone)} is{' '}
+          <strong>
+            {(() => {
+              const local = convertWallTime(startDate, startTime, timeZone, here)
+              return `${formatTime(local.time, state.prefs.use24HourTime)}${
+                local.date !== startDate ? ` on ${local.date}` : ''
+              }`
+            })()}
+          </strong>{' '}
+          here. The calendar shows it at your own time, and it moves if you travel.
+        </p>
+      )}
 
       <Field label="Repeat">
         <div style={{ width: '100%' }}>

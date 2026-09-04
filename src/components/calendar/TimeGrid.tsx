@@ -305,7 +305,7 @@ export function TimeGrid({
                       <span className="ev__time">
                         {preview
                           ? `${formatTime(preview.startTime, use24)}–${formatTime(preview.endTime, use24)}`
-                          : formatTime(occ.event.startTime, use24)}
+                          : formatTime(timeFromMinutes(occ.startMinutes), use24)}
                         {!compact && !preview && occ.event.location ? ` · ${occ.event.location}` : ''}
                       </span>
                       {/*

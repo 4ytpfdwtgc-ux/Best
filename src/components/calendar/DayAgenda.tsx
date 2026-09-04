@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import type { AppState, EventOccurrence, Reminder } from '../../types'
 import { occurrencesOnDay } from '../../state/selectors'
-import { formatTime, friendlyDate, minutesFromTime } from '../../lib/date'
+import { formatTime, friendlyDate, minutesFromTime, timeFromMinutes } from '../../lib/date'
+import { zoneLabel } from '../../lib/timezone'
 import { Icon } from '../ui/Icon'
 
 type Entry =
@@ -73,15 +74,24 @@ export function DayAgenda({
             <li key={`${occ.event.id}-${occ.date}`} className={`agenda__row tint-${cal?.tint ?? 'blue'}`}>
               <button type="button" className="agenda__btn" onClick={() => onOpenEvent(occ.event.id)}>
                 <span className="agenda__time">
-                  {occ.event.allDay ? 'all-day' : formatTime(occ.event.startTime, use24)}
+                  {/* The occurrence's minutes, not the event's own: a zoned
+                      event is stored in its zone and shown in yours. */}
+                  {occ.event.allDay ? 'all-day' : formatTime(timeFromMinutes(occ.startMinutes), use24)}
                   {!occ.event.allDay && occ.event.endTime && (
-                    <span className="agenda__end">{formatTime(occ.event.endTime, use24)}</span>
+                    <span className="agenda__end">
+                      {formatTime(timeFromMinutes(occ.endMinutes), use24)}
+                    </span>
                   )}
                 </span>
                 <span className="agenda__bar" />
                 <span className="agenda__text">
                   <span className="agenda__title">{occ.event.title || 'New Event'}</span>
                   {occ.event.location && <span className="agenda__sub">{occ.event.location}</span>}
+                  {occ.event.timeZone && (
+                    <span className="agenda__sub">
+                      {formatTime(occ.event.startTime, use24)} in {zoneLabel(occ.event.timeZone)}
+                    </span>
+                  )}
                 </span>
               </button>
             </li>

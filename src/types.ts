@@ -174,6 +174,12 @@ export interface CalendarEvent {
   /** ISO date `yyyy-mm-dd`; inclusive for all-day events. */
   endDate: string
   endTime?: string
+  /**
+   * An IANA zone the times are written in, e.g. `America/New_York`. Absent
+   * means the event floats: noon is noon wherever you are, which is right for
+   * most of a personal calendar and wrong for a flight or a call abroad.
+   */
+  timeZone?: string
   /** Minutes before start to alert; `null`/absent means no alert. */
   alertMinutesBefore?: number | null
   invitees?: string[]
