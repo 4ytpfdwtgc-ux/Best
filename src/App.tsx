@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getState, useApp } from './state/store'
 import { referencedAssetIds } from './state/selectors'
 import { sweepOrphans } from './lib/assets'
-import { setModule } from './state/actions'
+import { purgeExpiredReminders, setModule } from './state/actions'
 import { useIsPhone } from './lib/useMediaQuery'
 import { applyCapture } from './state/capture'
 import { AppRail } from './components/AppRail'
@@ -48,6 +48,8 @@ export default function App() {
    */
   useEffect(() => {
     void sweepOrphans(referencedAssetIds(getState()))
+    // A trashed task is kept for thirty days, then it really is gone.
+    purgeExpiredReminders()
   }, [])
 
   useEffect(() => {

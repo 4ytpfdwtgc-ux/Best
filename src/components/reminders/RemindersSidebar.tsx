@@ -11,6 +11,11 @@ const SMART: { id: SmartListId; label: string; icon: string; tint: string }[] = 
   { id: 'flagged', label: 'Flagged', icon: 'flag', tint: 'orange' },
 ]
 
+/** Kept apart from the working lists, below them, the way Notes keeps its own. */
+const TRASH: { id: SmartListId; label: string; icon: string } = {
+  id: 'trash', label: 'Recently Deleted', icon: 'trash',
+}
+
 export function RemindersSidebar({
   onNewList,
   onEditList,
@@ -40,6 +45,23 @@ export function RemindersSidebar({
             </button>
           </li>
         ))}
+      </ul>
+
+      <ul className="side-list">
+        <li>
+          <button
+            type="button"
+            className={`side-item${sel.kind === 'smart' && sel.id === TRASH.id ? ' is-on' : ''}`}
+            onClick={() => setReminderSelection({ kind: 'smart', id: TRASH.id })}
+            aria-current={sel.kind === 'smart' && sel.id === TRASH.id}
+          >
+            <span className="side-item__glyph side-item__glyph--plain">
+              <Icon name={TRASH.icon} size={15} />
+            </span>
+            <span className="side-item__name">{TRASH.label}</span>
+            <span className="side-item__count">{countForSmartList(state, TRASH.id)}</span>
+          </button>
+        </li>
       </ul>
 
       <div className="sidebar__section">Lists</div>

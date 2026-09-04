@@ -1,6 +1,8 @@
 import type { AppState, DatabaseView, Reminder } from '../../types'
 import type { Group } from '../../state/selectors'
-import { deleteReminder, setSelectedReminder, toggleFlag, toggleReminder } from '../../state/actions'
+import {
+  deleteReminder, destroyReminder, restoreReminder, setSelectedReminder, toggleFlag, toggleReminder,
+} from '../../state/actions'
 import { formatTime, friendlyDate, todayISO } from '../../lib/date'
 import { describeRecurrence } from '../../lib/recurrence'
 import { Icon } from '../ui/Icon'
@@ -16,6 +18,7 @@ export function ListView({
   groups,
   selectedId,
   lingering,
+  inTrash,
 }: {
   state: AppState
   view: DatabaseView
@@ -23,6 +26,8 @@ export function ListView({
   selectedId: string | null
   /** Reminders held on screen for a beat after being completed. */
   lingering: ReadonlySet<string>
+  /** Recently Deleted: restore and delete-for-good instead of the gesture. */
+  inTrash: boolean
 }) {
   return (
     <div className="db-list">
@@ -43,6 +48,7 @@ export function ListView({
                 reminder={reminder}
                 selected={reminder.id === selectedId}
                 leaving={lingering.has(reminder.id)}
+                inTrash={inTrash}
               />
             ))}
             {group.items.length === 0 && <li className="db-group__empty">Empty</li>}
@@ -59,6 +65,7 @@ function ListRow({
   reminder,
   selected,
   leaving,
+  inTrash,
 }: {
   state: AppState
   view: DatabaseView
@@ -66,28 +73,13 @@ function ListRow({
   selected: boolean
   /** Completed a moment ago: struck through, and about to be dropped. */
   leaving: boolean
+  inTrash: boolean
 }) {
   const list = state.lists.find((l) => l.id === reminder.listId)
   const overdue = !!reminder.dueDate && reminder.dueDate < todayISO() && !reminder.completed
   const done = reminder.subtasks.filter((s) => s.completed).length
 
-  return (
-    <li className="db-rowwrap">
-      <SwipeRow
-        // A completed row has nothing left to complete, so it only offers Delete.
-        left={
-          reminder.completed
-            ? undefined
-            : {
-                label: 'Complete',
-                icon: 'check',
-                tint: 'green',
-                keepsRow: true,
-                run: () => toggleReminder(reminder.id),
-              }
-        }
-        right={{ label: 'Delete', icon: 'trash', tint: 'red', run: () => deleteReminder(reminder.id) }}
-      >
+  const row = (
         <div
           className={`db-row${selected ? ' is-selected' : ''}${reminder.completed ? ' is-done' : ''}${
             leaving ? ' is-leaving' : ''
@@ -142,17 +134,58 @@ function ListRow({
             </span>
           </button>
 
-          <button
-            type="button"
-            className={`db-row__flag${reminder.flagged ? ' is-on' : ''}`}
-            onClick={() => toggleFlag(reminder.id)}
-            title={reminder.flagged ? 'Unflag' : 'Flag'}
-            aria-label={reminder.flagged ? 'Unflag' : 'Flag'}
-          >
-            <Icon name="flag" size={14} filled={reminder.flagged} />
-          </button>
+          {inTrash ? (
+            <span className="db-row__trashacts">
+              <button type="button" className="btn btn--plain" onClick={() => restoreReminder(reminder.id)}>
+                Restore
+              </button>
+              <button
+                type="button"
+                className="db-row__flag"
+                onClick={() => destroyReminder(reminder.id)}
+                title="Delete permanently"
+                aria-label={`Delete ${reminder.title || 'task'} permanently`}
+              >
+                <Icon name="trash" size={14} />
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={`db-row__flag${reminder.flagged ? ' is-on' : ''}`}
+              onClick={() => toggleFlag(reminder.id)}
+              title={reminder.flagged ? 'Unflag' : 'Flag'}
+              aria-label={reminder.flagged ? 'Unflag' : 'Flag'}
+            >
+              <Icon name="flag" size={14} filled={reminder.flagged} />
+            </button>
+          )}
         </div>
-      </SwipeRow>
+  )
+
+  return (
+    <li className="db-rowwrap">
+      {inTrash ? (
+        row
+      ) : (
+        <SwipeRow
+          // A completed row has nothing left to complete, so it only offers Delete.
+          left={
+            reminder.completed
+              ? undefined
+              : {
+                  label: 'Complete',
+                  icon: 'check',
+                  tint: 'green',
+                  keepsRow: true,
+                  run: () => toggleReminder(reminder.id),
+                }
+          }
+          right={{ label: 'Delete', icon: 'trash', tint: 'red', run: () => deleteReminder(reminder.id) }}
+        >
+          {row}
+        </SwipeRow>
+      )}
     </li>
   )
 }

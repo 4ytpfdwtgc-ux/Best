@@ -15,9 +15,10 @@ import { blocksToText } from '../lib/blocks'
 export function selectionTitle(s: AppState): string {
   const sel = s.reminderSelection
   if (sel.kind === 'smart') {
-    return { today: 'Today', scheduled: 'Scheduled', all: 'All', flagged: 'Flagged', completed: 'Completed' }[
-      sel.id as 'today'
-    ]
+    return {
+      today: 'Today', scheduled: 'Scheduled', all: 'All',
+      flagged: 'Flagged', completed: 'Completed', trash: 'Recently Deleted',
+    }[sel.id as 'today']
   }
   if (sel.kind === 'list') return s.lists.find((l) => l.id === sel.id)?.name ?? 'List'
   return `#${s.tags.find((t) => t.id === sel.id)?.name ?? 'tag'}`
@@ -44,6 +45,8 @@ function matchesSelection(r: Reminder, sel: ReminderSelection, today: string): b
       return r.flagged
     case 'completed':
       return r.completed
+    case 'trash':
+      return true
     case 'all':
     default:
       return true
@@ -51,13 +54,23 @@ function matchesSelection(r: Reminder, sel: ReminderSelection, today: string): b
 }
 
 /** Reminders for the current selection, ordered the way each view expects. */
+/**
+ * A trashed task belongs to no list but the trash, whatever else it matches.
+ * Every list goes through here rather than remembering to check the stamp.
+ */
+function selects(r: Reminder, sel: ReminderSelection, today: string): boolean {
+  const inTrash = sel.kind === 'smart' && sel.id === 'trash'
+  if (!!r.trashedAt !== inTrash) return false
+  return matchesSelection(r, sel, today)
+}
+
 export function visibleReminders(s: AppState, lingering: ReadonlySet<ID> = new Set()): Reminder[] {
   const today = todayISO()
   const sel = s.reminderSelection
   const showCompleted = sel.kind === 'smart' && sel.id === 'completed' ? true : s.prefs.showCompleted
 
   return s.reminders
-    .filter((r) => matchesSelection(r, sel, today))
+    .filter((r) => selects(r, sel, today))
     .filter((r) => showCompleted || !r.completed || lingering.has(r.id))
     .sort((a, b) => compareReminders(a, b, lingering))
 }
@@ -83,18 +96,20 @@ export function compareReminders(a: Reminder, b: Reminder, lingering: ReadonlySe
 
 export function countForSmartList(s: AppState, id: string): number {
   const today = todayISO()
+  if (id === 'trash') return s.reminders.filter((r) => r.trashedAt).length
   return s.reminders.filter((r) => {
+    if (r.trashedAt) return false
     if (id !== 'completed' && r.completed) return false
     return matchesSelection(r, { kind: 'smart', id: id as 'today' }, today)
   }).length
 }
 
 export function countForList(s: AppState, listId: ID): number {
-  return s.reminders.filter((r) => r.listId === listId && !r.completed).length
+  return s.reminders.filter((r) => r.listId === listId && !r.completed && !r.trashedAt).length
 }
 
 export function countForTag(s: AppState, tagId: ID): number {
-  return s.reminders.filter((r) => r.tags.includes(tagId) && !r.completed).length
+  return s.reminders.filter((r) => r.tags.includes(tagId) && !r.completed && !r.trashedAt).length
 }
 
 /** Group scheduled reminders under date headings. */
@@ -246,6 +261,7 @@ export function search(s: AppState, query: string, limit = 20): SearchHit[] {
   const hits: SearchHit[] = []
 
   for (const r of s.reminders) {
+    if (r.trashedAt) continue
     if (!`${r.title} ${r.notes ?? ''}`.toLowerCase().includes(q)) continue
     const list = s.lists.find((l) => l.id === r.listId)
     hits.push({
@@ -370,7 +386,7 @@ export function viewRows(
   const q = query.trim().toLowerCase()
 
   return s.reminders
-    .filter((r) => matchesSelection(r, s.reminderSelection, today))
+    .filter((r) => selects(r, s.reminderSelection, today))
     .filter((r) => !view.hideCompleted || !r.completed || lingering.has(r.id))
     .filter((r) => view.filters.every((f) => matchesFilter(s, r, f)))
     .filter((r) => !q || `${r.title} ${r.notes ?? ''}`.toLowerCase().includes(q))

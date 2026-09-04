@@ -65,6 +65,8 @@ export interface Reminder {
   sortIndex: number
   /** Values for the user-defined properties, keyed by `PropertyDef.id`. */
   props: Record<ID, PropertyValue>
+  /** Set when deleted: out of every list, kept for thirty days. */
+  trashedAt?: string
 }
 
 export interface ReminderList {
@@ -279,7 +281,7 @@ export type CalendarViewMode = 'day' | 'week' | 'month' | 'year'
 export type ThemeSetting = 'system' | 'light' | 'dark'
 
 /** Smart lists mirror Apple Reminders' built-in filters. */
-export type SmartListId = 'today' | 'scheduled' | 'all' | 'flagged' | 'completed'
+export type SmartListId = 'today' | 'scheduled' | 'all' | 'flagged' | 'completed' | 'trash'
 
 export interface ReminderSelection {
   kind: 'smart' | 'list' | 'tag'

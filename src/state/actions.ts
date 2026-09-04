@@ -116,12 +116,54 @@ export function updateReminder(id: ID, patch: Partial<Reminder>) {
   }))
 }
 
+/**
+ * Move a task to the trash.
+ *
+ * A swipe is far easier to trigger by accident than a button in a detail
+ * panel, and this is the only destructive gesture in the app, so it has to be
+ * recoverable. Pages have worked this way since the swipe went in; tasks did
+ * not, and vanished outright.
+ */
 export function deleteReminder(id: ID) {
+  releaseReminder(id)
+  setState((s) => ({
+    reminders: s.reminders.map((r) => (r.id === id ? { ...r, trashedAt: nowISO() } : r)),
+    selectedReminderId: s.selectedReminderId === id ? null : s.selectedReminderId,
+  }))
+}
+
+export function restoreReminder(id: ID) {
+  setState((s) => ({
+    reminders: s.reminders.map((r) => {
+      if (r.id !== id) return r
+      const { trashedAt: _dropped, ...rest } = r
+      return rest
+    }),
+  }))
+}
+
+/** Gone for good. The one irreversible action, so it is never a gesture. */
+export function destroyReminder(id: ID) {
   releaseReminder(id)
   setState((s) => ({
     reminders: s.reminders.filter((r) => r.id !== id),
     selectedReminderId: s.selectedReminderId === id ? null : s.selectedReminderId,
   }))
+}
+
+export function emptyReminderTrash() {
+  setState((s) => ({
+    reminders: s.reminders.filter((r) => !r.trashedAt),
+    selectedReminderId: null,
+  }))
+}
+
+/** Drop what has sat in the trash past its thirty days. Run once, at launch. */
+export function purgeExpiredReminders(days = 30) {
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString()
+  const stale = getState().reminders.some((r) => r.trashedAt && r.trashedAt < cutoff)
+  if (!stale) return
+  setState((s) => ({ reminders: s.reminders.filter((r) => !r.trashedAt || r.trashedAt >= cutoff) }))
 }
 
 /**

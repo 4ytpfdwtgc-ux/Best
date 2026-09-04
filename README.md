@@ -64,6 +64,13 @@ absolute ones would resolve to the domain root and break the installed app.
 - State persists to `localStorage` and is restored on launch.
 
 ### Tasks — a Notion database
+- **One line becomes a task.** The quick-add field parses what you type the way
+  the Shortcuts bridge parses what you dictate — "call the plumber tomorrow at
+  5pm #home !!" — and shows what it made of the phrase before Enter commits it.
+  A phrase it does not recognise stays a plain title; nothing is invented.
+- **Recently Deleted.** Deleting a task moves it there for thirty days rather
+  than dropping it, so the swipe is recoverable. The trash has no swipe of its
+  own: the only action left there is irreversible.
 - **Three views over the same rows**: List (grouped, closest to a to-do list),
   Board (kanban, drag cards between columns) and Table (a spreadsheet with one
   column per property). Each view keeps its own grouping, sort and filters.

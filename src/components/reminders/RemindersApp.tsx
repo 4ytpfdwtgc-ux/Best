@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
 import { useLingering } from '../../state/linger'
 import { groupRows, selectionTitle, viewRows } from '../../state/selectors'
-import { addReminder, setActiveView, setSelectedReminder } from '../../state/actions'
+import { addReminder, emptyReminderTrash, setActiveView, setSelectedReminder } from '../../state/actions'
 import { todayISO } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
@@ -14,6 +14,7 @@ import { ListView } from './ListView'
 import { BoardView } from './BoardView'
 import { TableView } from './TableView'
 import { ViewControls } from './ViewControls'
+import { QuickAdd } from './QuickAdd'
 import type { ReminderList, ViewMode } from '../../types'
 
 const MODE_ICON: Record<ViewMode, string> = {
@@ -43,6 +44,7 @@ export function RemindersApp({
   const selected = state.reminders.find((r) => r.id === state.selectedReminderId) ?? null
 
   const sel = state.reminderSelection
+  const inTrash = sel.kind === 'smart' && sel.id === 'trash'
   const targetList = sel.kind === 'list' ? (sel.id as string) : (state.lists[0]?.id ?? 'list_inbox')
 
   function newReminder() {
@@ -68,7 +70,9 @@ export function RemindersApp({
   })
 
   // A phone cannot show a table or a board usefully; keep it on the list.
-  const mode: ViewMode = isPhone && view.mode !== 'list' ? 'list' : view.mode
+  // A phone cannot show a table or a board usefully, and the trash is a plain
+  // list of things to restore whatever view is selected.
+  const mode: ViewMode = (isPhone || inTrash) && view.mode !== 'list' ? 'list' : view.mode
 
   return (
     <div className="module">
@@ -103,9 +107,24 @@ export function RemindersApp({
               aria-label="Search tasks"
             />
           </div>
-          <button type="button" className="btn btn--primary" onClick={newReminder}>
-            <Icon name="plus" size={14} strokeWidth={2.4} /> New
-          </button>
+          {inTrash ? (
+            <button
+              type="button"
+              className="btn btn--danger"
+              disabled={rows.length === 0}
+              onClick={() => {
+                if (confirm(`Delete ${rows.length} task${rows.length === 1 ? '' : 's'} permanently?`)) {
+                  emptyReminderTrash()
+                }
+              }}
+            >
+              Empty
+            </button>
+          ) : (
+            <button type="button" className="btn btn--primary" onClick={newReminder}>
+              <Icon name="plus" size={14} strokeWidth={2.4} /> New
+            </button>
+          )}
         </header>
 
         <div className="viewtabs">
@@ -128,11 +147,25 @@ export function RemindersApp({
           <ViewControls state={state} view={view} />
         </div>
 
+        {!inTrash && (
+          <QuickAdd
+            state={state}
+            listId={targetList}
+            defaultDate={sel.kind === 'smart' && sel.id === 'today' ? todayISO() : undefined}
+          />
+        )}
+
         {rows.length === 0 ? (
           <EmptyState
-            icon="checklist"
-            title="No tasks"
-            hint={query ? 'Nothing matches your search.' : 'Press New, or ⌘N, to add one.'}
+            icon={inTrash ? 'trash' : 'checklist'}
+            title={inTrash ? 'Nothing deleted' : 'No tasks'}
+            hint={
+              inTrash
+                ? 'Deleted tasks wait here for thirty days.'
+                : query
+                  ? 'Nothing matches your search.'
+                  : 'Type above, or press ⌘N.'
+            }
           />
         ) : mode === 'board' ? (
           <BoardView state={state} view={view} groups={groups} />
@@ -146,6 +179,7 @@ export function RemindersApp({
               groups={groups}
               selectedId={state.selectedReminderId}
               lingering={lingering}
+              inTrash={inTrash}
             />
           </div>
         )}
