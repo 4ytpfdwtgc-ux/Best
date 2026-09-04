@@ -119,6 +119,11 @@ absolute ones would resolve to the domain root and break the installed app.
   link to it. A link is followed from a block you are not editing; inside the
   block you are in, the same click places the caret, or a link's own words
   could never be corrected.
+- **Files**: `/file` attaches a PDF or anything else, and a dropped or pasted
+  file becomes a picture or an attachment according to what it is, so one drop
+  of a photo and a PDF makes one of each. An attachment is stored exactly as it
+  came — re-encoding one could only damage it — and can be handed back through
+  the share sheet.
 - **Link cards**: paste a web address into an empty block and it becomes a card
   — the site's icon, a title, and the site underneath — the way iOS does it.
   `/link` adds one by hand. Tap the card to open it, tap its title to correct
@@ -269,7 +274,8 @@ Dates are stored as `yyyy-mm-dd` strings and times as `HH:mm`, both local. That
 keeps day comparison a string comparison and avoids the timezone drift you get
 from serializing `Date` objects.
 
-Pictures are the one exception to "everything is one JSON blob". localStorage
+Pictures and attached files are the one exception to "everything is one JSON
+blob". localStorage
 caps out around 5MB — less than a single photo off an iPhone, before base64
 inflates it by a third — so `lib/assets.ts` keeps them in IndexedDB as binary
 and a block stores only the key. A picture over 1600px on its long edge is

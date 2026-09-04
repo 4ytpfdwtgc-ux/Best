@@ -5,7 +5,7 @@ import {
   emptyBlock, hiddenBlockIds, LIST_TYPES, matchShortcut,
 } from '../../lib/blocks'
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
-import { AssetError, putImage } from '../../lib/assets'
+import { AssetError, putFile, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
 import { toggleMark } from '../../lib/inline'
 import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
@@ -315,9 +315,17 @@ export function BlockEditor({ note }: { note: Note }) {
    * A replaced picture's bytes are not deleted here: a duplicated block shares
    * the key, so only a sweep that can see the whole page list may reclaim them.
    */
-  async function addPictures(target: Block, files: File[]) {
-    const pictures = files.filter((f) => f.type.startsWith('image/'))
-    if (!pictures.length) {
+  /**
+   * Put files into the page.
+   *
+   * The mode is the caller's, not the block's: a picture block's own picker
+   * only takes pictures, a file block's takes anything, and a drop or a paste
+   * decides per file — so one drop of a photo and a PDF makes a picture and an
+   * attachment rather than two of whichever the first one was.
+   */
+  async function addAttachments(target: Block, files: File[], mode: 'auto' | 'image' | 'file') {
+    const usable = mode === 'image' ? files.filter((f) => f.type.startsWith('image/')) : files
+    if (!usable.length) {
       setImageErrors((c) => ({ ...c, [target.id]: 'That file is not a picture.' }))
       return
     }
@@ -327,18 +335,21 @@ export function BlockEditor({ note }: { note: Note }) {
     let anchorId = target.id
 
     try {
-      for (const [i, file] of pictures.entries()) {
-        const stored = await putImage(file)
-        const patch: Partial<Block> = {
-          type: 'image',
-          assetId: stored.id,
-          imageWidth: stored.width,
-          imageHeight: stored.height,
-        }
+      for (const [i, file] of usable.entries()) {
+        const asPicture = mode === 'image' || (mode === 'auto' && file.type.startsWith('image/'))
+        const stored = asPicture ? await putImage(file) : await putFile(file)
+        const patch: Partial<Block> = asPicture
+          ? {
+              type: 'image',
+              assetId: stored.id,
+              imageWidth: stored.width,
+              imageHeight: stored.height,
+            }
+          : { type: 'file', assetId: stored.id, text: stored.name ?? file.name }
         if (i === 0) {
           patchBlock(target.id, patch)
         } else {
-          const fresh = { ...emptyBlock('image', target.indent), ...patch }
+          const fresh = { ...emptyBlock(patch.type ?? 'image', target.indent), ...patch }
           const next = [...blocksRef.current]
           next.splice(next.findIndex((b) => b.id === anchorId) + 1, 0, fresh)
           commit(next)
@@ -355,15 +366,16 @@ export function BlockEditor({ note }: { note: Note }) {
     }
   }
 
-  /** Pictures pasted into a block: they go after it rather than over its text. */
-  function pastePictures(block: Block, files: File[]) {
-    // An empty block has nothing worth keeping, so the picture lands in it.
-    if (!block.text && block.type === 'text') return void addPictures(block, files)
-    const fresh = emptyBlock('image', block.indent)
+  /** Files pasted or dropped on a block: they go after it, not over its text. */
+  function pasteFiles(block: Block, files: File[]) {
+    // An empty block has nothing worth keeping, so the first file lands in it.
+    if (!block.text && block.type === 'text') return void addAttachments(block, files, 'auto')
+    // A plain block to start from; each file then decides what it becomes.
+    const fresh = emptyBlock('text', block.indent)
     const next = [...blocksRef.current]
     next.splice(next.findIndex((b) => b.id === block.id) + 1, 0, fresh)
     commit(next)
-    void addPictures(fresh, files)
+    void addAttachments(fresh, files, 'auto')
   }
 
   /* ---------------------------------------------------------------- */
@@ -414,7 +426,7 @@ export function BlockEditor({ note }: { note: Note }) {
 
   /** Files dropped on the page land after whichever block they were dropped on. */
   function dropPictures(e: React.DragEvent) {
-    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'))
+    const files = [...e.dataTransfer.files]
     setDropping(false)
     if (!files.length) return
     e.preventDefault()
@@ -423,7 +435,7 @@ export function BlockEditor({ note }: { note: Note }) {
     const blocks = blocksRef.current
     const onto = blocks.find((b) => b.id === over?.dataset.blockId) ?? blocks[blocks.length - 1]
     if (!onto) return
-    pastePictures(onto, files)
+    pasteFiles(onto, files)
   }
 
   function applyDrop(id: string, state: DragState) {
@@ -510,9 +522,11 @@ export function BlockEditor({ note }: { note: Note }) {
                 onInsertAfter={() => insertAfter(block)}
                 onOpenMenu={(rect) => setMenu({ blockId: block.id, top: rect.bottom + 6, left: rect.left })}
                 onDragStart={(e) => startDrag(e, block)}
-                onPickImage={(files) => void addPictures(block, files)}
+                onPickImage={(files) =>
+                  void addAttachments(block, files, block.type === 'file' ? 'file' : 'image')
+                }
                 onClearImageError={() => clearImageError(block.id)}
-                onPasteImages={(files) => pastePictures(block, files)}
+                onPasteImages={(files) => pasteFiles(block, files)}
                 onPasteURL={(pasted) => pasteURL(block, pasted)}
                 onSetURL={(url) => setLinkURL(block, url)}
                 onFollowLink={followLink}

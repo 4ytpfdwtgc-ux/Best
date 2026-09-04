@@ -11,7 +11,14 @@ export async function shareOrDownload(
   contents: string,
   mimeType = 'text/calendar;charset=utf-8',
 ): Promise<'shared' | 'downloaded'> {
-  const blob = new Blob([contents], { type: mimeType })
+  return shareOrDownloadBlob(filename, new Blob([contents], { type: mimeType }))
+}
+
+/** The same, for bytes that already exist — a stored attachment, say. */
+export async function shareOrDownloadBlob(
+  filename: string,
+  blob: Blob,
+): Promise<'shared' | 'downloaded'> {
 
   if (typeof File === 'function' && navigator.share && navigator.canShare) {
     const file = new File([blob], filename, { type: blob.type })

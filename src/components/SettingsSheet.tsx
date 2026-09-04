@@ -107,7 +107,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             label="Show completed reminders"
           />
         </Row>
-        <Row label="Pictures on this device">
+        <Row label="Pictures and files on this device">
           <PictureUsage />
         </Row>
         <Row label="Sort notes by">
@@ -202,7 +202,7 @@ function PictureUsage() {
   if (!stats.count) return <span className="row__note">None yet</span>
   return (
     <span className="row__note">
-      {stats.count} {stats.count === 1 ? 'picture' : 'pictures'} · {formatBytes(stats.bytes)}
+      {stats.count} {stats.count === 1 ? 'item' : 'items'} · {formatBytes(stats.bytes)}
     </span>
   )
 }

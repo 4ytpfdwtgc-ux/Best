@@ -109,6 +109,35 @@ export async function putImage(file: Blob): Promise<StoredImage> {
   return stored
 }
 
+/**
+ * Store a file as it came, with no processing at all.
+ *
+ * A picture is shrunk because no page needs four thousand pixels; a PDF or a
+ * spreadsheet has no equivalent, and re-encoding one would only damage it.
+ */
+export async function putFile(file: File): Promise<StoredImage> {
+  const stored: StoredImage = {
+    id: uid('file'),
+    blob: file,
+    type: file.type || 'application/octet-stream',
+    name: file.name || 'Attachment',
+    bytes: file.size,
+    width: 0,
+    height: 0,
+    createdAt: new Date().toISOString(),
+  }
+  try {
+    await run('readwrite', (store) => store.add(stored))
+  } catch (error) {
+    throw new AssetError(
+      error instanceof Error && /quota|full/i.test(error.message)
+        ? 'There is no room left on this device for another file.'
+        : 'That file could not be saved.',
+    )
+  }
+  return stored
+}
+
 /** Write a record back exactly as it was, for restoring a backup. */
 export async function putStored(stored: StoredImage): Promise<void> {
   revokeURL(stored.id)
