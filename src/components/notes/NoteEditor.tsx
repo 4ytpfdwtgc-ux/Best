@@ -2,9 +2,10 @@ import { useState } from 'react'
 import type { Note } from '../../types'
 import { useApp } from '../../state/store'
 import {
-  addTag, archiveNote, deleteNoteForever, reminderFromNote, restoreNote,
-  setModule, toggleNotePin, trashNote, unarchiveNote, updateNote,
+  addTag, archiveNote, deleteNoteForever, noteTitle, reminderFromNote, restoreNote,
+  setModule, setSelectedNote, toggleNotePin, trashNote, unarchiveNote, updateNote,
 } from '../../state/actions'
+import { noteAncestors } from '../../lib/notes'
 import { relativeStamp } from '../../lib/date'
 import { Icon } from '../ui/Icon'
 import { BlockEditor } from './BlockEditor'
@@ -14,6 +15,7 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
   const [newTag, setNewTag] = useState('')
 
   const folder = state.folders.find((f) => f.id === note.folderId)
+  const ancestors = noteAncestors(state.notes, note)
 
   if (note.trashedAt) {
     return (
@@ -47,6 +49,17 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
       <header className="editor__bar">
         <span className="editor__crumb">
           {folder ? `${folder.name} / ` : ''}
+          {ancestors.map((up) => (
+            <button
+              key={up.id}
+              type="button"
+              className="editor__up"
+              onClick={() => setSelectedNote(up.id)}
+              title={`Open ${noteTitle(up)}`}
+            >
+              {noteTitle(up)}
+            </button>
+          ))}
           <strong>{note.title.trim() || 'Untitled'}</strong>
         </span>
 

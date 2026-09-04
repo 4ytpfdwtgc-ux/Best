@@ -85,6 +85,16 @@
   white-space: nowrap;
 }
 .editor__crumb strong { font-weight: 500; color: var(--text); }
+/* Each page above this one, clickable, in the same quiet weight as the folder. */
+.editor__up { color: inherit; font: inherit; padding: 0; }
+.editor__up:hover { color: var(--text); text-decoration: underline; }
+.editor__up::after {
+  content: '/';
+  margin: 0 5px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  display: inline-block;
+}
 .editor__stamp { font-size: 12px; color: var(--text-tertiary); margin-right: 6px; }
 
 .editor__page { flex: 1; min-height: 0; padding: 0 0 40vh; }
@@ -393,6 +403,44 @@
   background: rgba(255, 255, 255, 0.14);
 }
 .lightbox__close:hover { background: rgba(255, 255, 255, 0.26); }
+
+/* The page list as a tree ------------------------------------------ */
+
+.note-row { display: flex; align-items: center; }
+.note-row .note-card { flex: 1; min-width: 0; }
+
+/* A twist is a fixed gutter whether or not the page has anything inside, so
+   titles at the same depth still line up. */
+.note-row__twist {
+  flex: none;
+  width: 18px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  transition: transform 0.12s var(--ease);
+}
+.note-row__twist.is-open { transform: rotate(90deg); }
+.note-row__twist.is-empty { visibility: hidden; }
+.note-row__twist:hover { background: var(--bg-active); color: var(--text); }
+
+.note-row__add {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  opacity: 0;
+}
+.note-row:hover .note-row__add { opacity: 1; }
+.note-row__add:hover { background: var(--bg-active); color: var(--text); }
+/* No hover on a touch screen, so the control has to be there all the time. */
+@media (hover: none) {
+  .note-row__add { opacity: 1; }
+}
 
 /* Links written in the text ---------------------------------------- */
 

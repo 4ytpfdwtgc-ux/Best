@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
+import { noteTree } from '../../lib/notes'
 import {
-  addFolder, addNote, archiveNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
+  addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
   setSelectedFolder, setSelectedNote, trashNote, unarchiveNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
@@ -24,6 +25,10 @@ export function NotesApp({
   const [query, setQuery] = useState('')
 
   const notes = useMemo(() => visibleNotes(state, query), [state, query])
+  // Which pages are folded shut. View state, not the page's own, so it is not
+  // persisted and not shared between one person's devices.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
+  const rows = useMemo(() => noteTree(notes, collapsed), [notes, collapsed])
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
   const trashCount = state.notes.filter((n) => n.trashedAt).length
   const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
@@ -205,7 +210,7 @@ export function NotesApp({
           {notes.length === 0 && (
             <li className="notes-list__empty">{query ? 'No matches' : 'No notes'}</li>
           )}
-          {notes.map((note) => (
+          {rows.map(({ note, depth, hasChildren }) => (
             <li key={note.id}>
               <SwipeRow
                 // Recently Deleted holds only an irreversible action, which is
@@ -218,25 +223,71 @@ export function NotesApp({
                     : { label: 'Archive', icon: 'inbox', tint: 'blue', run: () => archiveNote(note.id) }
                 }
               >
-              <button
-                type="button"
-                className={`note-card${note.id === state.selectedNoteId ? ' is-on' : ''}`}
-                onClick={() => setSelectedNote(note.id)}
-              >
-                <span className="note-card__title">
-                  <span className="note-card__icon">
-                    {isIconName(note.icon ?? 'note')
-                      ? <Icon name={note.icon ?? 'note'} size={14} />
-                      : note.icon}
+              <div className="note-row" style={{ paddingLeft: depth * 14 }}>
+                <button
+                  type="button"
+                  className={`note-row__twist${hasChildren ? '' : ' is-empty'}${
+                    collapsed.has(note.id) ? '' : ' is-open'
+                  }`}
+                  aria-label={collapsed.has(note.id) ? 'Show pages inside' : 'Hide pages inside'}
+                  aria-expanded={hasChildren ? !collapsed.has(note.id) : undefined}
+                  tabIndex={hasChildren ? 0 : -1}
+                  onClick={() =>
+                    setCollapsed((current) => {
+                      if (!hasChildren) return current
+                      const next = new Set(current)
+                      if (next.has(note.id)) next.delete(note.id)
+                      else next.add(note.id)
+                      return next
+                    })
+                  }
+                >
+                  <Icon name="chevronRight" size={12} strokeWidth={2.2} />
+                </button>
+
+                <button
+                  type="button"
+                  className={`note-card${note.id === state.selectedNoteId ? ' is-on' : ''}`}
+                  onClick={() => setSelectedNote(note.id)}
+                >
+                  <span className="note-card__title">
+                    <span className="note-card__icon">
+                      {isIconName(note.icon ?? 'note')
+                        ? <Icon name={note.icon ?? 'note'} size={14} />
+                        : note.icon}
+                    </span>
+                    {noteTitle(note)}
+                    {note.pinned && <Icon name="pin" size={11} filled />}
                   </span>
-                  {noteTitle(note)}
-                  {note.pinned && <Icon name="pin" size={11} filled />}
-                </span>
-                <span className="note-card__meta">
-                  <span className="note-card__stamp">{relativeStamp(note.updatedAt)}</span>
-                  <span className="note-card__snippet">{noteSnippet(note)}</span>
-                </span>
-              </button>
+                  <span className="note-card__meta">
+                    <span className="note-card__stamp">{relativeStamp(note.updatedAt)}</span>
+                    <span className="note-card__snippet">{noteSnippet(note)}</span>
+                  </span>
+                </button>
+
+                {state.selectedFolderId !== 'trash' && state.selectedFolderId !== 'archive' && (
+                  <button
+                    type="button"
+                    className="note-row__add"
+                    title="New page inside"
+                    aria-label={`New page inside ${noteTitle(note)}`}
+                    onClick={() => {
+                      const child = addSubpage(note.id)
+                      if (!child) return
+                      // A new child is useless folded away.
+                      setCollapsed((current) => {
+                        if (!current.has(note.id)) return current
+                        const next = new Set(current)
+                        next.delete(note.id)
+                        return next
+                      })
+                      setSelectedNote(child.id)
+                    }}
+                  >
+                    <Icon name="plus" size={13} strokeWidth={2.2} />
+                  </button>
+                )}
+              </div>
               </SwipeRow>
             </li>
           ))}

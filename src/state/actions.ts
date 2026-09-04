@@ -4,6 +4,7 @@ import type {
   Reminder, ReminderList, ReminderSelection, Tag, TintName, CalendarViewMode,
 } from '../types'
 import { getState, setState } from './store'
+import { noteWithDescendants } from '../lib/notes'
 import { lingerReminder, releaseReminder } from './linger'
 import { uid } from '../lib/id'
 import { nowISO, todayISO } from '../lib/date'
@@ -470,40 +471,76 @@ export function updateNote(id: ID, patch: Partial<Note>) {
   }))
 }
 
+/*
+ * A page carries whatever is nested under it. Leaving the children behind
+ * would orphan them into the top level, which is not what "delete this page"
+ * means to anyone.
+ */
 export function trashNote(id: ID) {
+  const family = new Set(noteWithDescendants(getState().notes, id))
+  const at = nowISO()
   setState((s) => ({
     notes: s.notes.map((n) =>
-      n.id === id ? { ...n, trashedAt: nowISO(), archivedAt: undefined } : n,
+      family.has(n.id) ? { ...n, trashedAt: at, archivedAt: undefined } : n,
     ),
-    selectedNoteId: s.selectedNoteId === id ? null : s.selectedNoteId,
+    selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
   }))
 }
 
 /** Move a page out of the way without deleting it. */
 export function archiveNote(id: ID) {
+  const family = new Set(noteWithDescendants(getState().notes, id))
+  const at = nowISO()
   setState((s) => ({
-    notes: s.notes.map((n) => (n.id === id ? { ...n, archivedAt: nowISO() } : n)),
-    selectedNoteId: s.selectedNoteId === id ? null : s.selectedNoteId,
+    notes: s.notes.map((n) => (family.has(n.id) ? { ...n, archivedAt: at } : n)),
+    selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
   }))
 }
 
 export function unarchiveNote(id: ID) {
+  const family = new Set(noteWithDescendants(getState().notes, id))
   setState((s) => ({
-    notes: s.notes.map((n) => (n.id === id ? { ...n, archivedAt: undefined } : n)),
+    notes: s.notes.map((n) => (family.has(n.id) ? { ...n, archivedAt: undefined } : n)),
   }))
 }
 
 export function restoreNote(id: ID) {
+  const family = new Set(noteWithDescendants(getState().notes, id))
   setState((s) => ({
-    notes: s.notes.map((n) => (n.id === id ? { ...n, trashedAt: undefined } : n)),
+    notes: s.notes.map((n) => (family.has(n.id) ? { ...n, trashedAt: undefined } : n)),
   }))
 }
 
 export function deleteNoteForever(id: ID) {
+  const family = new Set(noteWithDescendants(getState().notes, id))
   setState((s) => ({
-    notes: s.notes.filter((n) => n.id !== id),
-    selectedNoteId: s.selectedNoteId === id ? null : s.selectedNoteId,
+    notes: s.notes.filter((n) => !family.has(n.id)),
+    selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
   }))
+}
+
+/** A new page inside another, in the same folder as its parent. */
+export function addSubpage(parentId: ID): Note | undefined {
+  const parent = getState().notes.find((n) => n.id === parentId)
+  if (!parent) return undefined
+  const created = addNote(parent.folderId)
+  updateNote(created.id, { parentId })
+  return { ...created, parentId }
+}
+
+/**
+ * Move a page under another, or to the top level.
+ *
+ * A page cannot be put inside its own descendant: that would cut the branch
+ * off the tree entirely, and it would simply stop being reachable.
+ */
+export function reparentNote(id: ID, parentId: ID | undefined) {
+  if (id === parentId) return
+  const s = getState()
+  if (parentId && noteWithDescendants(s.notes, id).includes(parentId)) return
+  const parent = parentId ? s.notes.find((n) => n.id === parentId) : undefined
+  if (parentId && !parent) return
+  updateNote(id, { parentId, ...(parent ? { folderId: parent.folderId } : {}) })
 }
 
 export function emptyTrash() {

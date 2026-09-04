@@ -5,7 +5,8 @@ import {
   markdownToBlocks, matchShortcut, orderedIndex,
 } from '../src/lib/blocks.ts'
 import { decorateInline, toggleMark } from '../src/lib/inline.ts'
-import type { Block } from '../src/types.ts'
+import type { Block, Note } from '../src/types.ts'
+import { noteTree } from '../src/lib/notes.ts'
 
 const block = (type: Block['type'], text: string, indent = 0, extra: Partial<Block> = {}): Block => ({
   ...emptyBlock(type, indent),
@@ -186,4 +187,55 @@ test('marks still work alongside links', () => {
   assert.match(html, /<strong>bold<\/strong>/)
   assert.match(html, /<a class="ln"/)
   assert.match(html, /<code>code<\/code>/)
+})
+
+/* Nested pages ------------------------------------------------------ */
+
+const page = (id: string, parentId?: string): Note => ({
+  id, folderId: 'f1', parentId, title: id, blocks: [], pinned: false, locked: false,
+  tags: [], createdAt: '', updatedAt: '',
+})
+
+test('pages nest, and a folded page hides what is inside it', () => {
+  const notes = [page('a'), page('a1', 'a'), page('a1x', 'a1'), page('b')]
+  const open = noteTree(notes, new Set())
+  assert.deepEqual(open.map((r) => [r.note.id, r.depth]), [['a', 0], ['a1', 1], ['a1x', 2], ['b', 0]])
+  assert.deepEqual(open.map((r) => r.hasChildren), [true, true, false, false])
+
+  const folded = noteTree(notes, new Set(['a']))
+  assert.deepEqual(folded.map((r) => r.note.id), ['a', 'b'])
+})
+
+test('a page whose parent is filtered out is shown rather than hidden', () => {
+  // Searching shows the matches; a child must not vanish because its parent
+  // did not match.
+  const rows = noteTree([page('a1', 'a')], new Set())
+  assert.deepEqual(rows.map((r) => [r.note.id, r.depth]), [['a1', 0]])
+})
+
+test('depth is capped so a deep chain cannot indent off the side', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+  const chain = ids.map((id, i) => page(id, i ? ids[i - 1] : undefined))
+  const rows = noteTree(chain, new Set(), 3)
+  assert.deepEqual(rows.map((r) => r.depth), [0, 1, 2, 3, 3, 3, 3])
+})
+
+test('a page in a cycle is still shown, rather than vanishing', () => {
+  // Not reachable through the UI, but a hand-edited backup could carry one.
+  // Every page in the ring has a parent, so none of them is a root.
+  const rows = noteTree([page('a', 'b'), page('b', 'a')], new Set())
+  assert.deepEqual(rows.map((r) => r.note.id).sort(), ['a', 'b'])
+})
+
+test('every visible page appears exactly once, whatever the parent links say', () => {
+  const notes = [page('a'), page('a1', 'a'), page('orphan', 'gone'), page('b', 'a1')]
+  const ids = noteTree(notes, new Set()).map((r) => r.note.id)
+  assert.equal(ids.length, notes.length)
+  assert.equal(new Set(ids).size, notes.length)
+})
+
+test('folding hides children without the cycle guard bringing them back', () => {
+  const notes = [page('a'), page('a1', 'a'), page('a1x', 'a1'), page('b')]
+  assert.deepEqual(noteTree(notes, new Set(['a'])).map((r) => r.note.id), ['a', 'b'])
+  assert.deepEqual(noteTree(notes, new Set(['a1'])).map((r) => r.note.id), ['a', 'a1', 'b'])
 })

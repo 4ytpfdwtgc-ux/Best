@@ -109,6 +109,10 @@ absolute ones would resolve to the domain root and break the installed app.
   files onto the page. On iPhone the picker offers the photo library and the
   camera. Several at once become several blocks, the block's own text is the
   caption, and tapping a picture opens it full-screen.
+- **Pages nest inside pages.** A page keeps only its parent's id, so the tree
+  is derived rather than stored and moving one is a single field. The list
+  folds and unfolds, the breadcrumb walks back up, and deleting or archiving a
+  page carries whatever is nested under it.
 - **Links in the writing**: `[text](url)` becomes a link, and `[[Page name]]`
   links to another page — creating it if it does not exist yet, since writing
   the link is usually how a page comes to exist. Each page lists the pages that

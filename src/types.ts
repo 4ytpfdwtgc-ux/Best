@@ -257,6 +257,8 @@ export interface Block {
 export interface Note {
   id: ID
   folderId: ID
+  /** The page this one sits inside. Absent at the top level of its folder. */
+  parentId?: ID
   /** The page title, shown large at the top and used in lists. */
   title: string
   /** Page icon: a name from the icon set, or an emoji saved by an older build. */

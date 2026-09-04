@@ -6,6 +6,7 @@ import { addDays, diffDays, friendlyDate, minutesFromTime, todayISO } from '../l
 import { occurrencesInRange } from '../lib/recurrence'
 import { noteTitle } from './actions'
 import { blocksToText } from '../lib/blocks'
+export { noteAncestors, noteTree, noteWithDescendants, type NoteRow } from '../lib/notes'
 
 
 /* ------------------------------------------------------------------ */
