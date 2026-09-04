@@ -347,7 +347,9 @@ export function deleteSubtask(reminderId: ID, subtaskId: ID) {
 
 export function clearCompleted(listId?: ID) {
   setState((s) => ({
-    reminders: s.reminders.filter((r) => !(r.completed && (!listId || r.listId === listId))),
+    reminders: s.reminders.filter(
+      (r) => r.trashedAt || !(r.completed && (!listId || r.listId === listId)),
+    ),
   }))
 }
 

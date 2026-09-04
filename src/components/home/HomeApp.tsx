@@ -40,6 +40,7 @@ export function HomeApp({
   const reminders = useMemo(
     () =>
       state.reminders
+        .filter((r) => !r.trashedAt)
         .filter((r) => (!r.completed || lingering.has(r.id)) && r.dueDate)
         .filter((r) => (isToday ? r.dueDate! <= date : r.dueDate === date))
         .sort((a, b) => compareReminders(a, b, lingering)),

@@ -122,7 +122,7 @@ export function MonthView({
         {days.map((day) => {
           const dayEvents = occurrencesOnDay(occurrences, day)
           const dayReminders = state.prefs.showRemindersOnCalendar
-            ? state.reminders.filter((r) => r.dueDate === day && !r.completed)
+            ? state.reminders.filter((r) => r.dueDate === day && !r.completed && !r.trashedAt)
             : []
           const chips = [...dayEvents, ...dayReminders.map((r) => ({ reminder: r }))]
           const overflow = chips.length - MAX_CHIPS

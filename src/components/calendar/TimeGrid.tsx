@@ -179,7 +179,7 @@ export function TimeGrid({
           <span className="tg__allday-label">all-day</span>
           {days.map((day, i) => {
             const reminders = overlayReminders
-              ? state.reminders.filter((r) => r.dueDate === day && !r.completed)
+              ? state.reminders.filter((r) => r.dueDate === day && !r.completed && !r.trashedAt)
               : []
             return (
               <div key={day} className="tg__allday-cell">
