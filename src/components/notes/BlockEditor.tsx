@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { getState, useApp } from '../../state/store'
 import type { Block, BlockType, Note, TintName } from '../../types'
 import {
   emptyBlock, hiddenBlockIds, LIST_TYPES, matchShortcut,
@@ -7,7 +8,8 @@ import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../
 import { AssetError, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
 import { toggleMark } from '../../lib/inline'
-import { setBlocks, updateNote } from '../../state/actions'
+import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
+import { backlinksTo, findNoteByTitle } from '../../state/selectors'
 import { Icon, isIconName } from '../ui/Icon'
 import { IconPicker } from '../ui/IconPicker'
 import { BlockRow } from './BlockRow'
@@ -391,6 +393,25 @@ export function BlockEditor({ note }: { note: Note }) {
     return true
   }
 
+  /**
+   * Follow a link written in the text.
+   *
+   * A `[[Page]]` that names nothing yet creates that page, rather than being a
+   * dead end — writing the link is usually how a page comes to exist.
+   */
+  function followLink({ href, wiki }: { href?: string; wiki?: string }) {
+    if (href) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (!wiki) return
+    const existing = findNoteByTitle(getState(), wiki)
+    if (existing) return setSelectedNote(existing.id)
+    const created = addNote(note.folderId)
+    updateNote(created.id, { title: wiki.trim() })
+    setSelectedNote(created.id)
+  }
+
   /** Files dropped on the page land after whichever block they were dropped on. */
   function dropPictures(e: React.DragEvent) {
     const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'))
@@ -482,6 +503,8 @@ export function BlockEditor({ note }: { note: Note }) {
                 onChange={(text) => onChange(block, text)}
                 onKeyDown={(e, el) => onKeyDown(e, el, block, index)}
                 onFocus={() => setActiveId(block.id)}
+                // Focus moving to another block sets its id straight after.
+                onBlur={() => setActiveId((current) => (current === block.id ? null : current))}
                 onToggleCheck={() => patchBlock(block.id, { checked: !block.checked })}
                 onToggleCollapse={() => patchBlock(block.id, { collapsed: !block.collapsed })}
                 onInsertAfter={() => insertAfter(block)}
@@ -492,6 +515,7 @@ export function BlockEditor({ note }: { note: Note }) {
                 onPasteImages={(files) => pastePictures(block, files)}
                 onPasteURL={(pasted) => pasteURL(block, pasted)}
                 onSetURL={(url) => setLinkURL(block, url)}
+                onFollowLink={followLink}
                 imageBusy={busyBlocks.has(block.id)}
                 imageError={imageErrors[block.id]}
               />
@@ -513,6 +537,8 @@ export function BlockEditor({ note }: { note: Note }) {
           Click here to continue writing…
         </button>
       </div>
+
+      <Backlinks note={note} />
 
       {iconAnchor && (
         <IconPicker
@@ -587,4 +613,40 @@ function caretRect(fallback: HTMLElement): DOMRect {
     if (rect.width || rect.height || rect.top) return rect
   }
   return fallback.getBoundingClientRect()
+}
+
+/**
+ * Pages that link here.
+ *
+ * The point of a wiki link is that it works both ways: writing `[[Groceries]]`
+ * on one page should make this page findable from there without anyone having
+ * to maintain a second list.
+ */
+function Backlinks({ note }: { note: Note }) {
+  const state = useApp()
+  const linked = useMemo(() => backlinksTo(state, note), [state, note])
+  if (!linked.length) return null
+
+  return (
+    <section className="backlinks" aria-label="Linked mentions">
+      <h2 className="backlinks__head">
+        <Icon name="link" size={12} />
+        {linked.length} linked {linked.length === 1 ? 'mention' : 'mentions'}
+      </h2>
+      <ul className="backlinks__list">
+        {linked.map((other) => (
+          <li key={other.id}>
+            <button type="button" className="backlinks__item" onClick={() => setSelectedNote(other.id)}>
+              {isIconName(other.icon ?? 'note') ? (
+                <Icon name={other.icon ?? 'note'} size={14} />
+              ) : (
+                <span aria-hidden="true">{other.icon}</span>
+              )}
+              {noteTitle(other)}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
 }

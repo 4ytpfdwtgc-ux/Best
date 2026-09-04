@@ -236,6 +236,43 @@ export function referencedAssetIds(s: AppState): Set<ID> {
   return ids
 }
 
+/** Every `[[Page]]` written in a page's blocks, in the order they appear. */
+export function wikiLinksIn(note: Note): string[] {
+  const found: string[] = []
+  for (const block of note.blocks) {
+    for (const match of block.text.matchAll(/\[\[([^\]\n]+)\]\]/g)) {
+      const name = match[1].trim()
+      if (name && !found.includes(name)) found.push(name)
+    }
+  }
+  return found
+}
+
+/** A page by its title, matched the way someone typing a link would expect. */
+export function findNoteByTitle(s: AppState, title: string): Note | undefined {
+  const wanted = title.trim().toLowerCase()
+  if (!wanted) return undefined
+  return s.notes.find((n) => !n.trashedAt && noteTitle(n).trim().toLowerCase() === wanted)
+}
+
+/**
+ * Pages that link here.
+ *
+ * Matched on the title rather than an id, so a link written before its page
+ * existed starts working the moment the page is created — which is how the
+ * link is usually written in the first place.
+ */
+export function backlinksTo(s: AppState, note: Note): Note[] {
+  const title = noteTitle(note).trim().toLowerCase()
+  if (!title) return []
+  return s.notes.filter(
+    (other) =>
+      other.id !== note.id &&
+      !other.trashedAt &&
+      wikiLinksIn(other).some((name) => name.toLowerCase() === title),
+  )
+}
+
 export function noteSnippet(note: Note): string {
   const text = blocksToText(note.blocks).trim()
   // When the title came from the first block, do not repeat it in the preview.

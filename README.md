@@ -109,6 +109,12 @@ absolute ones would resolve to the domain root and break the installed app.
   files onto the page. On iPhone the picker offers the photo library and the
   camera. Several at once become several blocks, the block's own text is the
   caption, and tapping a picture opens it full-screen.
+- **Links in the writing**: `[text](url)` becomes a link, and `[[Page name]]`
+  links to another page — creating it if it does not exist yet, since writing
+  the link is usually how a page comes to exist. Each page lists the pages that
+  link to it. A link is followed from a block you are not editing; inside the
+  block you are in, the same click places the caret, or a link's own words
+  could never be corrected.
 - **Link cards**: paste a web address into an empty block and it becomes a card
   — the site's icon, a title, and the site underneath — the way iOS does it.
   `/link` adds one by hand. Tap the card to open it, tap its title to correct

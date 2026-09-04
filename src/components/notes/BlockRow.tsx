@@ -19,6 +19,7 @@ export function BlockRow({
   onChange,
   onKeyDown,
   onFocus,
+  onBlur,
   onToggleCheck,
   onToggleCollapse,
   onInsertAfter,
@@ -29,6 +30,7 @@ export function BlockRow({
   onPasteImages,
   onPasteURL,
   onSetURL,
+  onFollowLink,
   imageBusy,
   imageError,
 }: {
@@ -40,6 +42,7 @@ export function BlockRow({
   onChange: (text: string) => void
   onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>, el: HTMLElement) => void
   onFocus: (el: HTMLElement) => void
+  onBlur: () => void
   onToggleCheck: () => void
   onToggleCollapse: () => void
   onInsertAfter: () => void
@@ -54,6 +57,8 @@ export function BlockRow({
   onPasteURL: (url: string) => boolean
   /** `link` only. */
   onSetURL: (url: string) => void
+  /** A link inside the text was clicked: an address, or a `[[Page]]` name. */
+  onFollowLink: (target: { href?: string; wiki?: string }) => void
   imageBusy: boolean
   imageError?: string
 }) {
@@ -93,6 +98,25 @@ export function BlockRow({
       onInput={(e) => onChange(e.currentTarget.textContent ?? '')}
       onKeyDown={(e) => onKeyDown(e, e.currentTarget)}
       onFocus={(e) => onFocus(e.currentTarget)}
+      /*
+       * Losing focus is what turns the raw text back into styled text. Without
+       * it a block stayed "active" once clicked, and its marks and links only
+       * came back when some other block was focused.
+       */
+      onBlur={onBlur}
+      /*
+       * A click on a link follows it, but only from a block that is not being
+       * edited. Inside the block you are already in, the same click has to
+       * place the caret instead — otherwise a link's own text could never be
+       * corrected. Caught on mousedown so focus never moves in the first case.
+       */
+      onMouseDown={(e) => {
+        if (active) return
+        const link = (e.target as HTMLElement).closest<HTMLElement>('a.ln')
+        if (!link) return
+        e.preventDefault()
+        onFollowLink({ href: link.dataset.href, wiki: link.dataset.wiki })
+      }}
       onPaste={(e) => {
         // A copied picture becomes a picture; everything else pastes as plain
         // text, so pasted markup cannot smuggle nodes into the editable.

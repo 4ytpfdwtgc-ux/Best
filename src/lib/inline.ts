@@ -6,7 +6,21 @@
  * caret offsets meaningful and avoids a parallel rich-text model.
  */
 
-const PATTERN = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`|~~[^~\n]+~~)/g
+import { normalizeURL } from './links.ts'
+
+/*
+ * Wiki links are matched before ordinary ones, or `[[Page]]` would be read as
+ * a link labelled `[Page`.
+ */
+const PATTERN =
+  /(\[\[[^\]\n]+\]\]|\[[^\]\n]*\]\([^)\s\n]+\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`|~~[^~\n]+~~)/g
+
+const WIKI = /^\[\[([^\]\n]+)\]\]$/
+const LINK = /^\[([^\]\n]*)\]\(([^)\s\n]+)\)$/
+
+function escapeAttr(text: string): string {
+  return escapeHtml(text).replace(/"/g, '&quot;')
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -26,6 +40,30 @@ export function decorateInline(text: string): string {
         `<span class="mk">${escapeHtml(part.slice(0, n))}</span>` +
         `<${tag}>${escapeHtml(part.slice(n, -n))}</${tag}>` +
         `<span class="mk">${escapeHtml(part.slice(-n))}</span>`
+
+      const wiki = part.match(WIKI)
+      if (wiki) {
+        // Resolved against page titles when clicked, not here: a page can be
+        // renamed, and a link written before its page exists still points at it.
+        return (
+          `<span class="mk">[[</span>` +
+          `<a class="ln ln--wiki" data-wiki="${escapeAttr(wiki[1])}">${escapeHtml(wiki[1])}</a>` +
+          `<span class="mk">]]</span>`
+        )
+      }
+
+      const link = part.match(LINK)
+      if (link) {
+        // Only http and https ever reach an href; anything else stays as text,
+        // so `[click](javascript:...)` is inert rather than armed.
+        const href = normalizeURL(link[2])
+        if (!href) return escapeHtml(part)
+        return (
+          `<span class="mk">[</span>` +
+          `<a class="ln" data-href="${escapeAttr(href)}">${escapeHtml(link[1] || href)}</a>` +
+          `<span class="mk">](${escapeHtml(link[2])})</span>`
+        )
+      }
 
       if (/^\*\*[^*\n]+\*\*$/.test(part)) return mark(2, 'strong')
       if (/^~~[^~\n]+~~$/.test(part)) return mark(2, 's')

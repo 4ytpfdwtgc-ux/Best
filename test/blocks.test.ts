@@ -146,3 +146,44 @@ test('a picture survives a copy out as a markdown image', () => {
   // Its caption is the block's words, so search and previews can still see it.
   assert.equal(blocksToText([picture]), 'Ferry at dusk')
 })
+
+test('an inline address becomes a link, with its markers still in the text', () => {
+  const html = decorateInline('see [the docs](https://example.com/a) now')
+  assert.match(html, /<a class="ln" data-href="https:\/\/example\.com\/a">the docs<\/a>/)
+  // The markers stay visible, so textContent still equals what is stored.
+  assert.match(html, /<span class="mk">\[<\/span>/)
+  assert.match(html, /<span class="mk">\]\(https:\/\/example\.com\/a\)<\/span>/)
+})
+
+test('a link that could run code stays inert text', () => {
+  for (const bad of ['javascript:alert(1)', 'data:text/html,<script>', 'vbscript:x']) {
+    const html = decorateInline(`[click](${bad})`)
+    assert.doesNotMatch(html, /<a /, `expected ${bad} not to become a link`)
+  }
+})
+
+test('a wiki link carries the page name for the click to resolve', () => {
+  const html = decorateInline('planned in [[Weekend projects]] already')
+  assert.match(html, /<a class="ln ln--wiki" data-wiki="Weekend projects">Weekend projects<\/a>/)
+  assert.match(html, /<span class="mk">\[\[<\/span>/)
+})
+
+test('a wiki link is not read as an ordinary link', () => {
+  // [[Page]] would otherwise match as a link labelled "[Page".
+  const html = decorateInline('[[Page]]')
+  assert.match(html, /ln--wiki/)
+  assert.equal(html.includes('data-href'), false)
+})
+
+test('link text is escaped, so a page name cannot inject markup', () => {
+  const html = decorateInline('[[<img src=x onerror=alert(1)>]]')
+  assert.doesNotMatch(html, /<img/)
+  assert.match(html, /&lt;img/)
+})
+
+test('marks still work alongside links', () => {
+  const html = decorateInline('**bold** and [a](https://example.com) and `code`')
+  assert.match(html, /<strong>bold<\/strong>/)
+  assert.match(html, /<a class="ln"/)
+  assert.match(html, /<code>code<\/code>/)
+})

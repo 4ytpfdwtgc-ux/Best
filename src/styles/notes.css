@@ -394,6 +394,56 @@
 }
 .lightbox__close:hover { background: rgba(255, 255, 255, 0.26); }
 
+/* Links written in the text ---------------------------------------- */
+
+.ln {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+.ln:hover { text-decoration-thickness: 2px; }
+/* A wiki link reads as part of the writing, not as an address. */
+.ln--wiki {
+  color: var(--text);
+  text-decoration-color: var(--text-tertiary);
+  font-weight: 500;
+}
+.ln--wiki:hover { background: var(--bg-hover); }
+
+/* Linked mentions --------------------------------------------------- */
+
+.backlinks {
+  margin: 28px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.backlinks__head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.backlinks__list { list-style: none; margin: 0; padding: 0; }
+.backlinks__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+}
+.backlinks__item:hover { background: var(--bg-hover); }
+
 /* Link cards ------------------------------------------------------- */
 
 /* The title sits inside the card, so the body is the card and nothing else. */
