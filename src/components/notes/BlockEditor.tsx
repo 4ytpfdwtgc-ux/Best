@@ -238,6 +238,8 @@ export function BlockEditor({ note }: { note: Note }) {
       collapsed: fresh.collapsed,
       tint: fresh.tint,
       icon: fresh.icon,
+      // Whatever else the type seeds — a table's starting grid, say.
+      rows: fresh.rows,
     })
     focusBlock(block.id, slash.start)
   }
@@ -529,6 +531,7 @@ export function BlockEditor({ note }: { note: Note }) {
                 onPasteImages={(files) => pasteFiles(block, files)}
                 onPasteURL={(pasted) => pasteURL(block, pasted)}
                 onSetURL={(url) => setLinkURL(block, url)}
+                onSetRows={(rows) => patchBlock(block.id, { rows })}
                 onFollowLink={followLink}
                 imageBusy={busyBlocks.has(block.id)}
                 imageError={imageErrors[block.id]}
@@ -596,6 +599,7 @@ export function BlockEditor({ note }: { note: Note }) {
               collapsed: fresh.collapsed,
               tint: type === 'callout' ? (menuBlock.tint ?? fresh.tint) : undefined,
               icon: type === 'callout' ? (menuBlock.icon ?? fresh.icon) : undefined,
+              rows: fresh.rows,
             })
             setMenu(null)
           }}

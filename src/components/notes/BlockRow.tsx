@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon'
 import { ImageBlock } from './ImageBlock'
 import { LinkBlock } from './LinkBlock'
 import { FileBlock } from './FileBlock'
+import { TableBlock } from './TableBlock'
 
 /**
  * One block. The editable element holds plain text; inline markers are styled
@@ -31,6 +32,7 @@ export function BlockRow({
   onPasteImages,
   onPasteURL,
   onSetURL,
+  onSetRows,
   onFollowLink,
   imageBusy,
   imageError,
@@ -58,6 +60,8 @@ export function BlockRow({
   onPasteURL: (url: string) => boolean
   /** `link` only. */
   onSetURL: (url: string) => void
+  /** `table` only. */
+  onSetRows: (rows: string[][]) => void
   /** A link inside the text was clicked: an address, or a `[[Page]]` name. */
   onFollowLink: (target: { href?: string; wiki?: string }) => void
   imageBusy: boolean
@@ -203,6 +207,8 @@ export function BlockRow({
           <span className="blk__callout-icon" contentEditable={false}>{block.icon ?? '💡'}</span>
         )}
 
+        {block.type === 'table' && <TableBlock block={block} onChange={onSetRows} />}
+
         {block.type === 'file' && (
           <FileBlock
             block={block}
@@ -251,6 +257,7 @@ function placeholderFor(block: Block, active: boolean): string {
     case 'code': return 'Code'
     case 'image': return active ? 'Write a caption…' : ''
     case 'file': return active ? 'Name this file…' : ''
+    case 'table': return active ? 'Caption this table…' : ''
     case 'link': return 'Untitled link'
     default: return active ? "Type '/' for commands" : ''
   }

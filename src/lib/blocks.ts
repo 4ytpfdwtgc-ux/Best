@@ -8,6 +8,15 @@ export function emptyBlock(type: BlockType = 'text', indent = 0): Block {
   const block: Block = { id: uid('blk'), type, text: '', indent }
   if (type === 'todo') block.checked = false
   if (type === 'toggle') block.collapsed = false
+  if (type === 'table') {
+    // A header and two rows: enough to see what it is without being a chore
+    // to cut down.
+    block.rows = [
+      ['', '', ''],
+      ['', '', ''],
+      ['', '', ''],
+    ]
+  }
   if (type === 'callout') {
     block.tint = 'gray'
     block.icon = '💡'
@@ -38,6 +47,7 @@ export const BLOCK_MENU: {
   { type: 'image', label: 'Picture', hint: 'Add a photo or an image file.', keywords: ['image', 'picture', 'photo', 'img', 'camera', 'upload'], glyph: '▣' },
   { type: 'link', label: 'Link', hint: 'Save a web address as a card.', keywords: ['link', 'url', 'web', 'bookmark', 'address', 'site'], glyph: '↗' },
   { type: 'file', label: 'File', hint: 'Attach a PDF, a document, anything.', keywords: ['file', 'attach', 'attachment', 'pdf', 'document', 'upload'], glyph: '⇩' },
+  { type: 'table', label: 'Table', hint: 'Rows and columns of plain text.', keywords: ['table', 'grid', 'rows', 'columns', 'spreadsheet'], glyph: '⊞' },
 ]
 
 export function blockLabel(type: BlockType): string {
@@ -130,6 +140,7 @@ export function blocksToMarkdown(blocks: Block[]): string {
         case 'image': return `${pad}![${b.text}](picture)`
         case 'link': return `${pad}[${b.text}](${b.url ?? ''})`
         case 'file': return `${pad}[${b.text || 'Attachment'}](file)`
+        case 'table': return tableToMarkdown(b, pad)
         case 'code': return `${pad}\`\`\`\n${b.text}\n${pad}\`\`\``
         default: return `${pad}${b.text}`
       }
@@ -184,3 +195,21 @@ export function markdownToBlocks(body: string): Block[] {
 }
 
 export const CALLOUT_TINTS: TintName[] = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red']
+
+/** A table as GitHub-flavoured markdown, so copying one out keeps its shape. */
+function tableToMarkdown(block: Block, pad: string): string {
+  const rows = block.rows ?? []
+  if (!rows.length) return ''
+  const width = Math.max(...rows.map((r) => r.length))
+  const cell = (value: string) => value.replace(/\|/g, '\\|').trim() || ' '
+  const line = (row: string[]) =>
+    `${pad}| ${Array.from({ length: width }, (_, i) => cell(row[i] ?? '')).join(' | ')} |`
+
+  const [header, ...body] = rows
+  return [
+    line(header),
+    `${pad}|${' --- |'.repeat(width)}`,
+    ...body.map(line),
+    ...(block.text.trim() ? [`${pad}${block.text.trim()}`] : []),
+  ].join('\n')
+}

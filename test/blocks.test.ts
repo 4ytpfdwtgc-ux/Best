@@ -239,3 +239,33 @@ test('folding hides children without the cycle guard bringing them back', () => 
   assert.deepEqual(noteTree(notes, new Set(['a'])).map((r) => r.note.id), ['a', 'b'])
   assert.deepEqual(noteTree(notes, new Set(['a1'])).map((r) => r.note.id), ['a', 'a1', 'b'])
 })
+
+/* Tables ------------------------------------------------------------ */
+
+const table = (rows: string[][], caption = ''): Block => ({ ...emptyBlock('table'), rows, text: caption })
+
+test('a new table starts with a header and two rows', () => {
+  const fresh = emptyBlock('table')
+  assert.equal(fresh.rows?.length, 3)
+  assert.equal(fresh.rows?.[0].length, 3)
+})
+
+test('a table copies out as a markdown table', () => {
+  const md = blocksToMarkdown([table([['Name', 'Qty'], ['Rope', '2'], ['Torch', '1']])])
+  assert.equal(md, ['| Name | Qty |', '| --- | --- |', '| Rope | 2 |', '| Torch | 1 |'].join('\n'))
+})
+
+test('a ragged table is squared off rather than emitted broken', () => {
+  const md = blocksToMarkdown([table([['A', 'B', 'C'], ['1']])])
+  assert.equal(md, ['| A | B | C |', '| --- | --- | --- |', '| 1 |   |   |'].join('\n'))
+})
+
+test('a pipe in a cell is escaped, so it cannot break the row', () => {
+  const md = blocksToMarkdown([table([['a|b'], ['c']])])
+  assert.match(md, /\| a\\\|b \|/)
+})
+
+test('a caption follows the table', () => {
+  const md = blocksToMarkdown([table([['A'], ['1']], 'Kit list')])
+  assert.equal(md.split('\n').at(-1), 'Kit list')
+})

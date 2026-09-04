@@ -119,6 +119,10 @@ absolute ones would resolve to the domain root and break the installed app.
   link to it. A link is followed from a block you are not editing; inside the
   block you are in, the same click places the caret, or a link's own words
   could never be corrected.
+- **Tables**: `/table` inserts a grid. Tab and Enter walk the cells and add a
+  row when they run off the end, rows and columns are added and removed from
+  the margins, a wide table scrolls inside itself rather than pushing the page
+  sideways, and copying one out gives a markdown table.
 - **Files**: `/file` attaches a PDF or anything else, and a dropped or pasted
   file becomes a picture or an attachment according to what it is, so one drop
   of a photo and a PDF makes one of each. An attachment is stored exactly as it

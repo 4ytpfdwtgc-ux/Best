@@ -492,6 +492,74 @@
 }
 .backlinks__item:hover { background: var(--bg-hover); }
 
+/* Tables ------------------------------------------------------------ */
+
+.blk--table .blk__body { flex-direction: column; gap: 4px; }
+.blk--table .blk__text { font-size: 13px; color: var(--text-tertiary); width: 100%; }
+
+.tbl { width: 100%; }
+/* A wide table scrolls inside itself rather than pushing the page sideways. */
+.tbl__scroll { position: relative; overflow-x: auto; padding-top: 14px; padding-left: 14px; }
+
+.tbl__grid {
+  display: grid;
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-width: min-content;
+}
+.tbl__cell {
+  padding: 7px 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  outline: none;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  min-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tbl__cell:focus { background: var(--bg-block-select, var(--bg-hover)); }
+.tbl__cell--head { font-weight: 600; background: var(--bg-code); }
+
+/* Controls live in the margins, so they never take space from the cells. */
+.tbl__cols {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 0;
+  height: 14px;
+  display: grid;
+  min-width: min-content;
+}
+.tbl__rows {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 14px;
+  display: grid;
+  grid-auto-rows: 1fr;
+  bottom: 0;
+}
+.tbl__drop {
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  opacity: 0;
+  border-radius: var(--radius-sm);
+}
+.tbl:hover .tbl__drop { opacity: 0.6; }
+.tbl__drop:hover { opacity: 1; background: var(--tint-red); color: #fff; }
+.tbl__drop:disabled { visibility: hidden; }
+
+.tbl__add { display: flex; gap: 4px; padding: 4px 0 0 14px; }
+.tbl__add .btn { font-size: 12.5px; color: var(--text-tertiary); }
+.tbl__add .btn:hover { color: var(--text); }
+
+@media (hover: none) {
+  .tbl__drop { opacity: 0.6; }
+}
+
 /* Attached files --------------------------------------------------- */
 
 .blk--file .blk__body { flex-direction: column; gap: 4px; }
