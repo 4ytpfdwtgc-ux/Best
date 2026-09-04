@@ -352,10 +352,21 @@ app's own origin is served: a link card's favicon still goes to the network.
 The app also asks for persistent storage, which iOS usually grants to an
 installed app and usually refuses to a tab.
 
+### Sharing
+
+A page or a task list can be sent to someone as markdown, from the button in
+its own toolbar — the iOS share sheet on a phone, a download elsewhere. That is
+a copy, not a shared document. Two people editing the same page, or a list that
+stays in step between them, needs an account, a server to hold the document and
+a way to merge two simultaneous edits; none of that is reachable from an app
+that runs entirely in one browser, so it is honestly absent rather than half
+present. Pictures, files and nested pages do not travel with the text, and the
+share warns before it goes.
+
 ## Not yet built
 
-Sync, notifications that actually fire, shared lists, location-based alerts,
-and undo.
+Sync, notifications that actually fire, real-time collaboration,
+location-based alerts, and undo.
 
 Two-way calendar sync and real Siri intents are not on this list because they
 are not reachable from a web app at all: both need either a server (a subscribed

@@ -6,6 +6,8 @@ import {
   setModule, setSelectedNote, toggleNotePin, trashNote, unarchiveNote, updateNote,
 } from '../../state/actions'
 import { noteAncestors } from '../../lib/notes'
+import { noteToMarkdown, shareFilename, unshareableCount } from '../../lib/share'
+import { shareOrDownload } from '../../lib/deliver'
 import { relativeStamp } from '../../lib/date'
 import { Icon } from '../ui/Icon'
 import { BlockEditor } from './BlockEditor'
@@ -74,6 +76,32 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
           aria-label={note.pinned ? 'Unpin' : 'Pin to top'}
         >
           <Icon name="pin" size={15} filled={note.pinned} />
+        </button>
+        <button
+          type="button"
+          className="tool-btn"
+          onClick={() => {
+            const title = noteTitle(note)
+            const left = unshareableCount(state, note)
+            if (
+              left &&
+              !confirm(
+                `${left} thing${left === 1 ? '' : 's'} on this page will not travel with the text ` +
+                  '— pictures, files and pages nested inside it. Share the writing anyway?',
+              )
+            ) {
+              return
+            }
+            void shareOrDownload(
+              shareFilename(title, 'md'),
+              noteToMarkdown(note, title),
+              'text/markdown;charset=utf-8',
+            )
+          }}
+          title="Share this page as text"
+          aria-label="Share this page as text"
+        >
+          <Icon name="share" size={15} />
         </button>
         <button
           type="button"

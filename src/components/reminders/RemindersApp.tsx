@@ -7,6 +7,8 @@ import { todayISO } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
+import { remindersToText, shareFilename } from '../../lib/share'
+import { shareOrDownload } from '../../lib/deliver'
 import { RemindersSidebar } from './RemindersSidebar'
 import { ReminderDetail } from './ReminderDetail'
 import { ListSheet } from './ListSheet'
@@ -107,6 +109,20 @@ export function RemindersApp({
               aria-label="Search tasks"
             />
           </div>
+          {!inTrash && rows.length > 0 && (
+            <ToolButton
+              icon="share"
+              label="Share this list as text"
+              onClick={() => {
+                const heading = selectionTitle(state)
+                void shareOrDownload(
+                  shareFilename(heading, 'md'),
+                  remindersToText(rows, heading, state.prefs.use24HourTime),
+                  'text/markdown;charset=utf-8',
+                )
+              }}
+            />
+          )}
           {inTrash ? (
             <button
               type="button"

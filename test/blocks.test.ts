@@ -5,7 +5,8 @@ import {
   markdownToBlocks, matchShortcut, orderedIndex,
 } from '../src/lib/blocks.ts'
 import { decorateInline, toggleMark } from '../src/lib/inline.ts'
-import type { Block, Note } from '../src/types.ts'
+import type { Block, Note, Reminder } from '../src/types.ts'
+import { noteToMarkdown, remindersToText, shareFilename } from '../src/lib/share.ts'
 import { noteTree } from '../src/lib/notes.ts'
 
 const block = (type: Block['type'], text: string, indent = 0, extra: Partial<Block> = {}): Block => ({
@@ -268,4 +269,41 @@ test('a pipe in a cell is escaped, so it cannot break the row', () => {
 test('a caption follows the table', () => {
   const md = blocksToMarkdown([table([['A'], ['1']], 'Kit list')])
   assert.equal(md.split('\n').at(-1), 'Kit list')
+})
+
+/* Sharing ----------------------------------------------------------- */
+
+test('a page shares as markdown with its title as the heading', () => {
+  const note = { ...page('n1'), blocks: [
+    { ...emptyBlock('h2'), text: 'Kit' },
+    { ...emptyBlock('todo'), text: 'Rope', checked: true },
+    { ...emptyBlock('bullet'), text: 'Torch' },
+  ] }
+  assert.equal(
+    noteToMarkdown(note, 'Trip planning'),
+    '# Trip planning\n\n## Kit\n- [x] Rope\n- Torch\n',
+  )
+})
+
+test('a list shares as a checklist with its dates', () => {
+  const task = (over: Partial<Reminder>): Reminder => ({
+    id: 't', listId: 'l', title: 'Task', completed: false, flagged: false, priority: 0,
+    tags: [], subtasks: [], props: {}, createdAt: '', updatedAt: '', sortIndex: 0, ...over,
+  })
+  const text = remindersToText(
+    [task({ title: 'Call the plumber', priority: 2 }), task({ title: 'Done thing', completed: true })],
+    'Home',
+  )
+  assert.equal(text, '# Home\n\n- [ ] Call the plumber !!\n- [x] Done thing\n')
+})
+
+test('an empty list says so rather than sharing a bare heading', () => {
+  assert.match(remindersToText([], 'Today'), /Nothing here\./)
+})
+
+test('a filename is slugged, dated, and never empty', () => {
+  const on = new Date(2026, 8, 4)
+  assert.equal(shareFilename('Trip planning!', 'md', on), 'trip-planning-2026-09-04.md')
+  assert.equal(shareFilename('   ', 'md', on), 'cadence-2026-09-04.md')
+  assert.equal(shareFilename('#!?', 'md', on), 'cadence-2026-09-04.md')
 })

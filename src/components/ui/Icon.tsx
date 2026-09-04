@@ -21,6 +21,7 @@ const paths: Record<string, string> = {
   arrowRight: 'M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5',
   arrowUpRight: 'M7 17L17 7M8.5 7H17v8.5',
   download: 'M12 4v11M8 11.5l4 4 4-4M4.5 19.5h15',
+  share: 'M12 15.5V4M8.2 7.5L12 3.8l3.8 3.7M6 12.5H4.5v7h15v-7H18',
   upload: 'M12 15.5v-11M8 8.5l4-4 4 4M4.5 19.5h15',
   ellipsis: 'M6 12h.01M12 12h.01M18 12h.01',
 

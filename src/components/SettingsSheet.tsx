@@ -125,6 +125,21 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       </section>
 
       <section className="settings__group">
+        <h3 className="settings__heading">Sharing</h3>
+        <p className="settings__note">
+          A page or a list can be sent to someone as text, from the button in its own toolbar — on
+          iPhone that opens the share sheet, so it goes straight into a message or an email.
+        </p>
+        <p className="settings__note">
+          It is a copy, not a shared document. Two people editing the same page, or a list that
+          stays in step between you, needs an account, a server to hold the document and a way to
+          merge two edits at once. None of that is reachable from an app that runs entirely in this
+          browser, so it is honestly not here rather than half here. Pictures, files and pages
+          nested inside a page do not travel with its text either.
+        </p>
+      </section>
+
+      <section className="settings__group">
         <h3 className="settings__heading">Backup</h3>
         <BackupRows onRestored={onClose} />
       </section>
