@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useApp, resetStore } from '../state/store'
+import { useEffect, useRef, useState } from 'react'
+import { useApp, replaceState, resetStore } from '../state/store'
 import { setPrefs } from '../state/actions'
 import { captureUrlTemplate } from '../state/capture'
 import { buildICS } from '../lib/ics'
@@ -7,6 +7,7 @@ import { shareOrDownload } from '../lib/deliver'
 import { Row, Sheet, Switch, TintPicker } from './ui/primitives'
 import { Icon } from './ui/Icon'
 import { formatBytes, usage } from '../lib/assets'
+import { BackupError, backupFilename, buildBackup, readBackup, restoreAssets } from '../lib/backup'
 import type { ThemeSetting } from '../types'
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
@@ -124,6 +125,11 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       </section>
 
       <section className="settings__group">
+        <h3 className="settings__heading">Backup</h3>
+        <BackupRows onRestored={onClose} />
+      </section>
+
+      <section className="settings__group">
         <h3 className="settings__heading">iOS</h3>
 
         <Row label="Send events to the system calendar">
@@ -198,5 +204,106 @@ function PictureUsage() {
     <span className="row__note">
       {stats.count} {stats.count === 1 ? 'picture' : 'pictures'} · {formatBytes(stats.bytes)}
     </span>
+  )
+}
+
+/**
+ * Export and restore the whole library.
+ *
+ * Everything lives in this one browser, so a cleared cache or a new phone
+ * takes all of it. This is the only recovery a static app can offer, which is
+ * why it is a section of its own rather than a line in a menu.
+ */
+function BackupRows({ onRestored }: { onRestored: () => void }) {
+  const state = useApp()
+  const [busy, setBusy] = useState<'export' | 'import' | null>(null)
+  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function exportAll() {
+    setBusy('export')
+    setMessage(null)
+    try {
+      const json = await buildBackup(state)
+      const how = await shareOrDownload(backupFilename(), json, 'application/json')
+      setMessage({
+        kind: 'ok',
+        text: how === 'shared' ? 'Backup shared.' : 'Backup saved to your downloads.',
+      })
+    } catch {
+      setMessage({ kind: 'error', text: 'The backup could not be written.' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function importAll(file: File) {
+    setBusy('import')
+    setMessage(null)
+    try {
+      const { backup, summary } = readBackup(await file.text())
+      const when = summary.exportedAt.slice(0, 10)
+      const ok = confirm(
+        `Restore the backup from ${when}?\n\n` +
+          `${summary.notes} pages, ${summary.reminders} tasks, ${summary.events} events, ` +
+          `${summary.assets} pictures.\n\n` +
+          'Everything currently in this app will be replaced.',
+      )
+      if (!ok) return
+
+      // Assets first: state restored before them would sweep them as orphans.
+      await restoreAssets(backup.assets)
+      replaceState(backup.state)
+      onRestored()
+    } catch (error) {
+      setMessage({
+        kind: 'error',
+        text: error instanceof BackupError ? error.message : 'That backup could not be read.',
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <>
+      <Row label="Everything, as one file">
+        <button type="button" className="btn" onClick={() => void exportAll()} disabled={busy !== null}>
+          <Icon name="download" size={14} /> {busy === 'export' ? 'Working…' : 'Export'}
+        </button>
+      </Row>
+      <Row label="Restore from a backup">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy !== null}
+        >
+          <Icon name="upload" size={14} /> {busy === 'import' ? 'Working…' : 'Choose a file'}
+        </button>
+      </Row>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/json,.json"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) void importAll(file)
+        }}
+      />
+      <p className="settings__note">
+        Tasks, events, pages and pictures are held in this browser alone — no account, no server.
+        Clearing website data or moving to another phone takes them with it, and iOS can evict the
+        storage of a site that has not been opened for a week. An exported file is the only way
+        back, so keep one somewhere safe.
+      </p>
+      {message && (
+        <p className={`settings__note${message.kind === 'error' ? ' is-error' : ''}`}>{message.text}</p>
+      )}
+    </>
   )
 }

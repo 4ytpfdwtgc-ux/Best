@@ -20,6 +20,8 @@ const paths: Record<string, string> = {
   chevronDown: 'M5.5 9.5L12 16l6.5-6.5',
   arrowRight: 'M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5',
   arrowUpRight: 'M7 17L17 7M8.5 7H17v8.5',
+  download: 'M12 4v11M8 11.5l4 4 4-4M4.5 19.5h15',
+  upload: 'M12 15.5v-11M8 8.5l4-4 4 4M4.5 19.5h15',
   ellipsis: 'M6 12h.01M12 12h.01M18 12h.01',
 
   /* Objects */

@@ -77,6 +77,18 @@ export function useApp(): AppState {
   return useSyncExternalStore(subscribe, getState, getState)
 }
 
+/**
+ * Replace the whole library, as a restored backup does.
+ *
+ * The saved state goes through the same migration as any older save, so a
+ * backup written by an earlier build is brought forward rather than refused.
+ */
+export function replaceState(saved: Partial<AppState>): void {
+  state = migrate(saved)
+  persist()
+  listeners.forEach((l) => l())
+}
+
 /** Wipe persisted state and reload with fresh sample data. */
 export function resetStore(): void {
   localStorage.removeItem(STORAGE_KEY)

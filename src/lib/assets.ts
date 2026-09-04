@@ -26,6 +26,8 @@ export interface StoredImage {
   id: string
   blob: Blob
   type: string
+  /** The original filename, for anything that is not shown as a picture. */
+  name?: string
   bytes: number
   /** 0 when the browser could not decode the picture to measure it. */
   width: number
@@ -105,6 +107,12 @@ export async function putImage(file: Blob): Promise<StoredImage> {
     )
   }
   return stored
+}
+
+/** Write a record back exactly as it was, for restoring a backup. */
+export async function putStored(stored: StoredImage): Promise<void> {
+  revokeURL(stored.id)
+  await run('readwrite', (store) => store.put(stored))
 }
 
 export function getImage(id: string): Promise<StoredImage | undefined> {

@@ -328,3 +328,5 @@
 .swipe__action--right { justify-content: flex-end; }
 /* Past the commit point the action fills, so letting go looks decisive. */
 .swipe__action.is-armed { background: var(--tint); color: #fff; }
+
+.settings__note.is-error { color: var(--tint-red); }

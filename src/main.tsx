@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { registerServiceWorker, requestPersistence } from './lib/offline'
 
 import './styles/theme.css'
 import './styles/base.css'
@@ -20,3 +21,8 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 )
+
+// The app has to start from the device when there is no signal, and its
+// storage has to survive a week of not being opened.
+registerServiceWorker()
+void requestPersistence()

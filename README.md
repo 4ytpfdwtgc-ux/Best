@@ -276,10 +276,34 @@ saved state, so they do not travel with an exported note or to another browser.
 And Safari can evict a site's storage after about a week of not being opened;
 adding the app to the Home screen is what stops that.
 
+### Backup, and why it matters here
+
+Settings exports the whole library — state, pictures and files — as one JSON
+file, and restores one. Everything is held in this browser alone: no account,
+no server. Clearing website data or moving to another phone takes it with it,
+and Safari evicts the storage of a site left unopened for about a week. An
+exported file is the only way back, which is why it is a section of Settings
+rather than a line in a menu. Restoring runs the same schema migration as any
+older save, so a backup from an earlier build is brought forward rather than
+refused; assets are written before the state, or the launch sweep would see
+them as orphans and reclaim them.
+
+### Offline
+
+`src/sw-template.js` is a service worker with the built filenames substituted
+in at build time by a small plugin in `vite.config.ts` — a hand-written worker
+cannot know Vite's hashed names, and a plugin that generates one would be a
+dependency for thirty lines of substitution. Navigations are network-first, so
+a deploy is picked up on the next launch with a signal; everything else is
+cache-first, which is safe because the assets carry a content hash. Only this
+app's own origin is served: a link card's favicon still goes to the network.
+The app also asks for persistent storage, which iOS usually grants to an
+installed app and usually refuses to a tab.
+
 ## Not yet built
 
 Sync, notifications that actually fire, shared lists, location-based alerts,
-file attachments other than pictures, drag-to-reschedule, and undo.
+and undo.
 
 Two-way calendar sync and real Siri intents are not on this list because they
 are not reachable from a web app at all: both need either a server (a subscribed
