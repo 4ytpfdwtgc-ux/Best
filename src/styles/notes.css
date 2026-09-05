@@ -837,3 +837,42 @@
   color: var(--accent-text);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+
+/*
+ * Restore, in the slot the "new page inside" button uses elsewhere. Recently
+ * Deleted is somewhere people go on purpose, so the way back out is a button
+ * and not only a swipe.
+ */
+.note-row__restore {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--tint-green);
+  cursor: pointer;
+  transform: rotate(180deg);
+}
+.note-row__restore:hover { background: var(--bg-hover); }
+
+.note-row__trashacts { flex: none; display: flex; align-items: center; }
+
+/* Deleting for good is a button rather than a gesture, so it looks like one. */
+.note-row__destroy {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.note-row__destroy:hover { background: var(--bg-hover); color: var(--tint-red); }

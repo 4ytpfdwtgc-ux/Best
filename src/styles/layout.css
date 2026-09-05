@@ -326,3 +326,29 @@
 @keyframes toast-in {
   from { opacity: 0; transform: translate(-50%, 8px); }
 }
+
+/* The same toast, with the way back out of a deletion on the end of it. */
+.toast--undo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+}
+.toast__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast__undo {
+  flex: none;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--bg-window);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast__undo:hover { background: var(--bg-hover); }
+.toast__undo:active { transform: scale(0.97); }

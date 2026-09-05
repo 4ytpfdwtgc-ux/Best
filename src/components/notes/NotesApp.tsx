@@ -6,9 +6,9 @@ import {
   MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, beginDrag, releaseOtherGestures,
 } from '../../lib/gestures'
 import {
-  addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, moveNoteToFolder,
-  noteTitle, reorderNote, reparentNote, setPrefs, setSelectedFolder, setSelectedNote, trashNote,
-  unarchiveNote, updateFolder,
+  addFolder, addNote, addSubpage, archiveNote, deleteFolder, deleteNoteForever, emptyTrash,
+  moveNoteToFolder, noteTitle, reorderNote, reparentNote, restoreNote, setPrefs, setSelectedFolder,
+  setSelectedNote, trashNote, unarchiveNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
@@ -51,6 +51,7 @@ export function NotesApp({
     [notes, expanded, searching],
   )
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
+  const inTrash = state.selectedFolderId === 'trash'
   const trashCount = state.notes.filter((n) => n.trashedAt).length
   const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
 
@@ -75,7 +76,7 @@ export function NotesApp({
   const draggedRef = useRef(false)
 
   function startPageDrag(e: React.PointerEvent, id: string) {
-    if (e.button !== 0 || state.selectedFolderId === 'trash' || searching) return
+    if (e.button !== 0 || inTrash || searching) return
     const startX = e.clientX
     const startY = e.clientY
     const touch = e.pointerType === 'touch'
@@ -386,14 +387,23 @@ export function NotesApp({
                 <div className="note-row__dropline" style={{ marginLeft: depth * 14 }} />
               )}
               <SwipeRow
-                // Recently Deleted holds only an irreversible action, which is
-                // not something a swipe should be able to reach.
-                disabled={state.selectedFolderId === 'trash'}
-                right={{ label: 'Delete', icon: 'trash', tint: 'red', run: () => trashNote(note.id) }}
+                /*
+                 * In Recently Deleted the gesture only puts a page back.
+                 * Deleting for good is a button there, as it is for tasks: a
+                 * swipe is far too easy to land on the wrong row, and the few
+                 * seconds of undo are all that stands behind it.
+                 */
+                right={
+                  inTrash
+                    ? undefined
+                    : { label: 'Delete', icon: 'trash', tint: 'red', run: () => trashNote(note.id) }
+                }
                 left={
-                  state.selectedFolderId === 'archive'
-                    ? { label: 'Restore', icon: 'arrowRight', tint: 'green', run: () => unarchiveNote(note.id) }
-                    : { label: 'Archive', icon: 'inbox', tint: 'blue', run: () => archiveNote(note.id) }
+                  inTrash
+                    ? { label: 'Restore', icon: 'arrowRight', tint: 'green', run: () => restoreNote(note.id) }
+                    : state.selectedFolderId === 'archive'
+                      ? { label: 'Restore', icon: 'arrowRight', tint: 'green', run: () => unarchiveNote(note.id) }
+                      : { label: 'Archive', icon: 'inbox', tint: 'blue', run: () => archiveNote(note.id) }
                 }
               >
               <div
@@ -454,7 +464,30 @@ export function NotesApp({
                   </span>
                 </button>
 
-                {state.selectedFolderId !== 'trash' && state.selectedFolderId !== 'archive' && (
+                {inTrash && (
+                  <span className="note-row__trashacts">
+                    <button
+                      type="button"
+                      className="note-row__restore"
+                      title="Restore"
+                      aria-label={`Restore ${noteTitle(note)}`}
+                      onClick={() => restoreNote(note.id)}
+                    >
+                      <Icon name="arrowRight" size={13} strokeWidth={2.2} />
+                    </button>
+                    <button
+                      type="button"
+                      className="note-row__destroy"
+                      title="Delete permanently"
+                      aria-label={`Delete ${noteTitle(note)} permanently`}
+                      onClick={() => deleteNoteForever(note.id)}
+                    >
+                      <Icon name="trash" size={13} />
+                    </button>
+                  </span>
+                )}
+
+                {!inTrash && state.selectedFolderId !== 'archive' && (
                   <button
                     type="button"
                     className="note-row__add"

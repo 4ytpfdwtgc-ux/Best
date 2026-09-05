@@ -5,12 +5,25 @@ import type {
 } from '../types'
 import { getState, setState } from './store'
 import { noteWithDescendants, reorderedSiblings } from '../lib/notes'
+import { pluck, spliceBack } from '../lib/records'
 import { lingerReminder, releaseReminder } from './linger'
+import { clearUndo, offerUndo } from './undo'
 import { uid } from '../lib/id'
 import { nowISO, todayISO } from '../lib/date'
 import { nextOccurrence } from '../lib/recurrence'
 import { emptyBlock, markdownToBlocks } from '../lib/blocks'
 import { PROP, STATUS } from './seed'
+
+/* ------------------------------------------------------------------ */
+/* Taking a deletion back                                              */
+/* ------------------------------------------------------------------ */
+
+/** A name in a toast, short enough that the toast stays one line. */
+function quoted(name: string | undefined, fallback: string): string {
+  const clean = (name ?? '').trim()
+  if (!clean) return fallback
+  return `“${clean.length > 28 ? `${clean.slice(0, 27)}…` : clean}”`
+}
 
 /* ------------------------------------------------------------------ */
 /* Navigation & preferences                                            */
@@ -53,6 +66,14 @@ export function updateList(id: ID, patch: Partial<ReminderList>) {
 }
 
 export function deleteList(id: ID) {
+  const before = getState()
+  const list = before.lists.find((l) => l.id === id)
+  if (!list) return
+  // A list takes its tasks with it, and neither is in any trash, so the offer
+  // to undo is the only way back.
+  const lists = pluck(before.lists, (l) => l.id === id)
+  const reminders = pluck(before.reminders, (r) => r.listId === id)
+
   setState((s) => ({
     lists: s.lists.filter((l) => l.id !== id),
     reminders: s.reminders.filter((r) => r.listId !== id),
@@ -61,6 +82,13 @@ export function deleteList(id: ID) {
         ? { kind: 'smart', id: 'today' }
         : s.reminderSelection,
   }))
+
+  offerUndo(`Deleted ${quoted(list.name, 'the list')}`, () =>
+    setState((s) => ({
+      lists: spliceBack(s.lists, lists),
+      reminders: spliceBack(s.reminders, reminders),
+    })),
+  )
 }
 
 export function addTag(name: string, tint: TintName = 'gray'): Tag {
@@ -126,14 +154,20 @@ export function updateReminder(id: ID, patch: Partial<Reminder>) {
  * not, and vanished outright.
  */
 export function deleteReminder(id: ID) {
+  const task = getState().reminders.find((r) => r.id === id)
+  if (!task || task.trashedAt) return
   releaseReminder(id)
   setState((s) => ({
     reminders: s.reminders.map((r) => (r.id === id ? { ...r, trashedAt: nowISO() } : r)),
     selectedReminderId: s.selectedReminderId === id ? null : s.selectedReminderId,
   }))
+  offerUndo(`Deleted ${quoted(task.title, 'the task')}`, () => restoreReminder(id))
 }
 
 export function restoreReminder(id: ID) {
+  // Taking it back by hand answers the standing offer to undo, which would
+  // otherwise sit there naming something that is visibly no longer deleted.
+  clearUndo()
   setState((s) => ({
     reminders: s.reminders.map((r) => {
       if (r.id !== id) return r
@@ -143,20 +177,32 @@ export function restoreReminder(id: ID) {
   }))
 }
 
-/** Gone for good. The one irreversible action, so it is never a gesture. */
+/** Gone from the trash as well -- with a few seconds' grace to take it back. */
 export function destroyReminder(id: ID) {
+  const before = getState()
+  const task = before.reminders.find((r) => r.id === id)
+  if (!task) return
+  const taken = pluck(before.reminders, (r) => r.id === id)
   releaseReminder(id)
   setState((s) => ({
     reminders: s.reminders.filter((r) => r.id !== id),
     selectedReminderId: s.selectedReminderId === id ? null : s.selectedReminderId,
   }))
+  offerUndo(`Deleted ${quoted(task.title, 'the task')} for good`, () =>
+    setState((s) => ({ reminders: spliceBack(s.reminders, taken) })),
+  )
 }
 
 export function emptyReminderTrash() {
+  const taken = pluck(getState().reminders, (r) => !!r.trashedAt)
+  if (!taken.length) return
   setState((s) => ({
     reminders: s.reminders.filter((r) => !r.trashedAt),
     selectedReminderId: null,
   }))
+  offerUndo(`Emptied Recently Deleted (${taken.length})`, () =>
+    setState((s) => ({ reminders: spliceBack(s.reminders, taken) })),
+  )
 }
 
 /** Drop what has sat in the trash past its thirty days. Run once, at launch. */
@@ -346,11 +392,13 @@ export function deleteSubtask(reminderId: ID, subtaskId: ID) {
 }
 
 export function clearCompleted(listId?: ID) {
-  setState((s) => ({
-    reminders: s.reminders.filter(
-      (r) => r.trashedAt || !(r.completed && (!listId || r.listId === listId)),
-    ),
-  }))
+  const gone = (r: Reminder) => !r.trashedAt && r.completed && (!listId || r.listId === listId)
+  const taken = pluck(getState().reminders, gone)
+  if (!taken.length) return
+  setState((s) => ({ reminders: s.reminders.filter((r) => !gone(r)) }))
+  offerUndo(`Cleared ${taken.length} completed`, () =>
+    setState((s) => ({ reminders: spliceBack(s.reminders, taken) })),
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -374,10 +422,23 @@ export function updateCalendar(id: ID, patch: Partial<Calendar>) {
 }
 
 export function deleteCalendar(id: ID) {
+  const before = getState()
+  const calendar = before.calendars.find((c) => c.id === id)
+  if (!calendar) return
+  const calendars = pluck(before.calendars, (c) => c.id === id)
+  const events = pluck(before.events, (e) => e.calendarId === id)
+
   setState((s) => ({
     calendars: s.calendars.filter((c) => c.id !== id),
     events: s.events.filter((e) => e.calendarId !== id),
   }))
+
+  offerUndo(`Deleted ${quoted(calendar.name, 'the calendar')}`, () =>
+    setState((s) => ({
+      calendars: spliceBack(s.calendars, calendars),
+      events: spliceBack(s.events, events),
+    })),
+  )
 }
 
 export function toggleCalendarVisible(id: ID) {
@@ -408,11 +469,25 @@ export function updateEvent(id: ID, patch: Partial<CalendarEvent>) {
   }))
 }
 
+/*
+ * An event has no Recently Deleted -- a calendar is a record of when things
+ * are, and one that quietly kept the cancelled ones would be worse than one
+ * that does not. So the way back is the offer to undo, taken straight away.
+ */
 export function deleteEvent(id: ID) {
+  const before = getState()
+  const event = before.events.find((e) => e.id === id)
+  if (!event) return
+  const taken = pluck(before.events, (e) => e.id === id)
+
   setState((s) => ({
     events: s.events.filter((e) => e.id !== id),
     selectedEventId: s.selectedEventId === id ? null : s.selectedEventId,
   }))
+
+  offerUndo(`Deleted ${quoted(event.title, 'the event')}`, () =>
+    setState((s) => ({ events: spliceBack(s.events, taken) })),
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -435,12 +510,29 @@ export function updateFolder(id: ID, patch: Partial<Folder>) {
 }
 
 export function deleteFolder(id: ID) {
+  const before = getState()
+  const folder = before.folders.find((f) => f.id === id)
+  if (!folder) return
+  const folders = pluck(before.folders, (f) => f.id === id)
+  // Only the pages this deletion trashed come back out of the trash; ones that
+  // were already in there were put there by someone, and stay.
+  const trashed = new Set(
+    before.notes.filter((n) => n.folderId === id && !n.trashedAt).map((n) => n.id),
+  )
   const stamp = nowISO()
+
   setState((s) => ({
     folders: s.folders.filter((f) => f.id !== id),
     notes: s.notes.map((n) => (n.folderId === id ? { ...n, trashedAt: n.trashedAt ?? stamp } : n)),
     selectedFolderId: s.selectedFolderId === id ? 'all' : s.selectedFolderId,
   }))
+
+  offerUndo(`Deleted ${quoted(folder.name, 'the folder')}`, () =>
+    setState((s) => ({
+      folders: spliceBack(s.folders, folders),
+      notes: s.notes.map((n) => (trashed.has(n.id) ? { ...n, trashedAt: undefined } : n)),
+    })),
+  )
 }
 
 export function addNote(folderId?: ID): Note {
@@ -479,14 +571,35 @@ export function updateNote(id: ID, patch: Partial<Note>) {
  * means to anyone.
  */
 export function trashNote(id: ID) {
-  const family = new Set(noteWithDescendants(getState().notes, id))
+  const before = getState()
+  const page = before.notes.find((n) => n.id === id)
+  if (!page || page.trashedAt) return
+  const family = new Set(noteWithDescendants(before.notes, id))
+  // What this deletion trashed, so undo takes back exactly that much.
+  const restore = new Set(
+    before.notes.filter((n) => family.has(n.id) && !n.trashedAt).map((n) => n.id),
+  )
+  const archived = new Set(
+    before.notes.filter((n) => family.has(n.id) && n.archivedAt).map((n) => n.id),
+  )
   const at = nowISO()
+
   setState((s) => ({
     notes: s.notes.map((n) =>
       family.has(n.id) ? { ...n, trashedAt: at, archivedAt: undefined } : n,
     ),
     selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
   }))
+
+  offerUndo(`Deleted ${quoted(noteTitle(page), 'the page')}`, () =>
+    setState((s) => ({
+      notes: s.notes.map((n) =>
+        restore.has(n.id)
+          ? { ...n, trashedAt: undefined, archivedAt: archived.has(n.id) ? at : undefined }
+          : n,
+      ),
+    })),
+  )
 }
 
 /** Move a page out of the way without deleting it. */
@@ -507,6 +620,7 @@ export function unarchiveNote(id: ID) {
 }
 
 export function restoreNote(id: ID) {
+  clearUndo()
   const family = new Set(noteWithDescendants(getState().notes, id))
   setState((s) => ({
     notes: s.notes.map((n) => (family.has(n.id) ? { ...n, trashedAt: undefined } : n)),
@@ -514,7 +628,15 @@ export function restoreNote(id: ID) {
 }
 
 export function deleteNoteForever(id: ID) {
-  const family = new Set(noteWithDescendants(getState().notes, id))
+  const before = getState()
+  const page = before.notes.find((n) => n.id === id)
+  const family = new Set(noteWithDescendants(before.notes, id))
+  const taken = pluck(before.notes, (n) => family.has(n.id))
+  if (page) {
+    offerUndo(`Deleted ${quoted(noteTitle(page), 'the page')} for good`, () =>
+      setState((s) => ({ notes: spliceBack(s.notes, taken) })),
+    )
+  }
   setState((s) => ({
     notes: s.notes.filter((n) => !family.has(n.id)),
     selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
@@ -679,7 +801,12 @@ export function moveNoteToFolder(id: ID, folderId: ID) {
 }
 
 export function emptyTrash() {
+  const taken = pluck(getState().notes, (n) => !!n.trashedAt)
+  if (!taken.length) return
   setState((s) => ({ notes: s.notes.filter((n) => !n.trashedAt) }))
+  offerUndo(`Emptied Recently Deleted (${taken.length})`, () =>
+    setState((s) => ({ notes: spliceBack(s.notes, taken) })),
+  )
 }
 
 export function toggleNotePin(id: ID) {

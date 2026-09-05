@@ -5,10 +5,12 @@ import { sweepOrphans } from './lib/assets'
 import { purgeExpiredReminders, setModule } from './state/actions'
 import { useIsPhone } from './lib/useMediaQuery'
 import { applyCapture } from './state/capture'
+import { takeUndo, useUndo } from './state/undo'
 import { AppRail } from './components/AppRail'
 import { TabBar } from './components/TabBar'
 import { QuickFind } from './components/QuickFind'
 import { SettingsSheet } from './components/SettingsSheet'
+import { UndoToast } from './components/UndoToast'
 import { HomeApp } from './components/home/HomeApp'
 import { RemindersApp } from './components/reminders/RemindersApp'
 import { CalendarApp } from './components/calendar/CalendarApp'
@@ -29,6 +31,7 @@ export default function App() {
   const [settings, setSettings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
+  const undo = useUndo()
 
   /*
    * A shortcut hands work over in the query string. Consume it once, then
@@ -114,6 +117,12 @@ export default function App() {
         setSidebarOpen((v) => !v)
         return
       }
+      if (meta && e.key.toLowerCase() === 'z' && !e.shiftKey && !isTyping()) {
+        // Only the app's own undo; inside a field the browser's is the one
+        // anyone means, and it is left alone.
+        if (takeUndo()) e.preventDefault()
+        return
+      }
       if (e.key === '/' && !isTyping()) {
         e.preventDefault()
         setQuickFind(true)
@@ -150,10 +159,15 @@ export default function App() {
 
       {isPhone && <TabBar module={state.module} onSelect={setModule} />}
 
-      {toast && (
-        <div className="toast" role="status" aria-live="polite" onClick={() => setToast(null)}>
-          {toast}
-        </div>
+      {/* One toast slot: a deletion that can still be taken back outranks a note. */}
+      {undo ? (
+        <UndoToast />
+      ) : (
+        toast && (
+          <div className="toast" role="status" aria-live="polite" onClick={() => setToast(null)}>
+            {toast}
+          </div>
+        )
       )}
 
       {quickFind && <QuickFind onClose={() => setQuickFind(false)} />}
