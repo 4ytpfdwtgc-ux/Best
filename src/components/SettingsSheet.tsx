@@ -8,6 +8,8 @@ import { Row, Sheet, Switch, TintPicker } from './ui/primitives'
 import { Icon } from './ui/Icon'
 import { formatBytes, usage } from '../lib/assets'
 import { BackupError, backupFilename, buildBackup, readBackup, restoreAssets } from '../lib/backup'
+import { parseImportFiles } from '../lib/import'
+import { importNotes } from '../state/actions'
 import type { ThemeSetting } from '../types'
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
@@ -122,6 +124,11 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             <option value="title">Title</option>
           </select>
         </Row>
+      </section>
+
+      <section className="settings__group">
+        <h3 className="settings__heading">Import notes</h3>
+        <ImportNotes onDone={onClose} />
       </section>
 
       <section className="settings__group">
@@ -315,6 +322,95 @@ function BackupRows({ onRestored }: { onRestored: () => void }) {
         Clearing website data or moving to another phone takes them with it, and iOS can evict the
         storage of a site that has not been opened for a week. An exported file is the only way
         back, so keep one somewhere safe.
+      </p>
+      {message && (
+        <p className={`settings__note${message.kind === 'error' ? ' is-error' : ''}`}>{message.text}</p>
+      )}
+    </>
+  )
+}
+
+/**
+ * Bring notes in from Apple Notes.
+ *
+ * iOS gives no app a way to read Notes directly, so the route is Shortcuts:
+ * it can walk every note and write each one to a file, and this reads whatever
+ * that produces. The recipe is spelled out because it is the part people get
+ * stuck on, not the picking.
+ */
+function ImportNotes({ onDone }: { onDone: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+
+  async function take(files: File[]) {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const read = await Promise.all(files.map(async (f) => ({ name: f.name, text: await f.text() })))
+      const parsed = parseImportFiles(read)
+      if (!parsed.length) {
+        setMessage({ kind: 'error', text: 'Nothing in those files looked like a note.' })
+        return
+      }
+      const { pages, folders } = importNotes(parsed)
+      setMessage({
+        kind: 'ok',
+        text:
+          `Brought in ${pages} ${pages === 1 ? 'page' : 'pages'}` +
+          (folders ? ` and made ${folders} ${folders === 1 ? 'folder' : 'folders'}.` : '.'),
+      })
+      onDone()
+    } catch {
+      setMessage({ kind: 'error', text: 'Those files could not be read.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <Row label="Notes exported from another app">
+        <button
+          type="button"
+          className="btn"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          <Icon name="upload" size={14} /> {busy ? 'Reading…' : 'Choose files'}
+        </button>
+      </Row>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept=".txt,.md,.markdown,.json,text/plain,text/markdown,application/json"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => {
+          const files = [...(e.target.files ?? [])]
+          e.target.value = ''
+          if (files.length) void take(files)
+        }}
+      />
+
+      <h4 className="settings__sub">Getting them out of Apple Notes</h4>
+      <p className="settings__note">
+        iOS gives no other app a way to read Notes, so Shortcuts has to do it. Make a shortcut:{' '}
+        <em>Find All Notes</em> → <em>Repeat with Each</em> → inside the repeat,{' '}
+        <em>Save File</em> (the note, into a folder in Files, with “Ask where to save” off). Run
+        it once, then choose those files above — you can select them all at once.
+      </p>
+      <p className="settings__note">
+        Each file becomes a page, titled by its filename. Plain text and Markdown both work, and
+        headings, lists and checkboxes survive. This adds to what is already here; it never
+        replaces it.
+      </p>
+      <p className="settings__note">
+        What cannot come across: images and attachments, tables, scanned documents and drawings —
+        a text export has nowhere to put them — and locked notes, which Shortcuts cannot read at
+        all.
       </p>
       {message && (
         <p className={`settings__note${message.kind === 'error' ? ' is-error' : ''}`}>{message.text}</p>

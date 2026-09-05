@@ -9,7 +9,7 @@ import { lingerReminder, releaseReminder } from './linger'
 import { uid } from '../lib/id'
 import { nowISO, todayISO } from '../lib/date'
 import { nextOccurrence } from '../lib/recurrence'
-import { emptyBlock } from '../lib/blocks'
+import { emptyBlock, markdownToBlocks } from '../lib/blocks'
 import { PROP, STATUS } from './seed'
 
 /* ------------------------------------------------------------------ */
@@ -519,6 +519,54 @@ export function deleteNoteForever(id: ID) {
     notes: s.notes.filter((n) => !family.has(n.id)),
     selectedNoteId: family.has(s.selectedNoteId ?? '') ? null : s.selectedNoteId,
   }))
+}
+
+/**
+ * Bring imported notes in as pages.
+ *
+ * Additive, unlike restoring a backup: nothing already here is touched. Notes
+ * that name a folder land in one of that name, created if it does not exist,
+ * so an Apple Notes folder structure survives the trip.
+ */
+export function importNotes(
+  imported: { title: string; body: string; folder?: string }[],
+  fallbackFolder = 'Imported',
+): { pages: number; folders: number } {
+  if (!imported.length) return { pages: 0, folders: 0 }
+
+  let foldersMade = 0
+  const byName = new Map<string, ID>()
+  for (const folder of getState().folders) byName.set(folder.name.trim().toLowerCase(), folder.id)
+
+  const folderFor = (name: string): ID => {
+    const key = name.trim().toLowerCase()
+    const existing = byName.get(key)
+    if (existing) return existing
+    const created = addFolder(name)
+    byName.set(key, created.id)
+    foldersMade++
+    return created.id
+  }
+
+  const now = nowISO()
+  const pages: Note[] = imported.map((note) => ({
+    id: uid('note'),
+    folderId: folderFor(note.folder?.trim() || fallbackFolder),
+    title: note.title.slice(0, 200),
+    blocks: markdownToBlocks(note.body),
+    pinned: false,
+    locked: false,
+    tags: [],
+    createdAt: now,
+    updatedAt: now,
+  }))
+
+  setState((s) => ({
+    notes: [...s.notes, ...pages],
+    selectedNoteId: pages[0]?.id ?? s.selectedNoteId,
+    selectedFolderId: pages[0]?.folderId ?? s.selectedFolderId,
+  }))
+  return { pages: pages.length, folders: foldersMade }
 }
 
 /** A new page inside another, in the same folder as its parent. */

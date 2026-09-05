@@ -368,6 +368,24 @@ app's own origin is served: a link card's favicon still goes to the network.
 The app also asks for persistent storage, which iOS usually grants to an
 installed app and usually refuses to a tab.
 
+### Importing notes
+
+iOS gives no other app a way to read Apple Notes, so Shortcuts has to do it:
+*Find All Notes* → *Repeat with Each* → *Save File*, once, into a folder in
+Files. Settings then takes those files — all of them at once — and makes a page
+of each, titled by its filename. `lib/import.ts` is deliberately generous about
+what it accepts, because a recipe can be built several ways: one file per note,
+one file with all of them run together behind a separator, the JSON a *Get
+Contents* step emits, and `Title:`/`Folder:` headers when the recipe wrote
+them. A note that names a folder lands in one of that name, created if it does
+not exist, so an Apple Notes folder structure survives the trip. Markdown
+structure survives too — headings, lists, checkboxes, quotes and code.
+
+Importing is additive: it never replaces what is already here, which is what
+separates it from restoring a backup. Images, attachments, tables, scanned
+documents and drawings cannot come across at all — a text export has nowhere
+to put them — and locked notes are unreadable to Shortcuts in the first place.
+
 ### Sharing
 
 A page or a task list can be sent to someone as markdown, from the button in
