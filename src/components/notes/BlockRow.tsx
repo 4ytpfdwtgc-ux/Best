@@ -142,9 +142,17 @@ export function BlockRow({
 
   return (
     <div
-      className={`blk blk--${block.type}${dragging ? ' is-dragging' : ''}${
-        block.type === 'callout' ? ` tint-${block.tint ?? 'gray'}` : ''
-      }`}
+      className={[
+        'blk',
+        `blk--${block.type}`,
+        dragging ? 'is-dragging' : '',
+        // The callout draws its own background; every other block gets one
+        // only when it has been given a colour.
+        block.type === 'callout' ? `tint-${block.tint ?? 'gray'}` : block.tint ? `tint-${block.tint} is-tinted` : '',
+        block.color ? `blk--inked ink-${block.color}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       data-block-id={block.id}
       data-block-index={index}
       style={{ marginLeft: block.indent * 24 }}

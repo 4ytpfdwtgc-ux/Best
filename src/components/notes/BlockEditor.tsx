@@ -1,21 +1,34 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getState, useApp } from '../../state/store'
-import type { Block, BlockType, Note, TintName } from '../../types'
+import type { Block, BlockType, NoteFont, Note, TintName } from '../../types'
 import {
   emptyBlock, hiddenBlockIds, LIST_TYPES, matchShortcut,
 } from '../../lib/blocks'
-import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
+import {
+  focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart, selectBlockRange, selectionRange,
+} from '../../lib/caret'
 import { AssetError, putFile, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
 import { DRAG_SLOP, suppressSelection } from '../../lib/gestures'
-import { toggleMark } from '../../lib/inline'
+import { hasMark, MARKERS, toggleMark, type MarkName } from '../../lib/inline'
 import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
 import { backlinksTo, findNoteByTitle } from '../../state/selectors'
 import { Icon, isIconName } from '../ui/Icon'
 import { IconPicker } from '../ui/IconPicker'
 import { BlockRow } from './BlockRow'
+import { FormatBar } from './FormatBar'
 import { SlashMenu } from './SlashMenu'
 import { BlockMenu } from './BlockMenu'
+
+/** ⌘B and friends. Shift is spelled out so ⌘⇧H can differ from ⌘H. */
+const SHORTCUT_MARKS: Record<string, MarkName | undefined> = {
+  b: 'bold',
+  i: 'italic',
+  u: 'underline',
+  e: 'code',
+  'shift+x': 'strike',
+  'shift+h': 'highlight',
+}
 
 interface DragState {
   id: string
@@ -35,12 +48,38 @@ export function BlockEditor({ note }: { note: Note }) {
   const [busyBlocks, setBusyBlocks] = useState<ReadonlySet<string>>(new Set())
   const [imageErrors, setImageErrors] = useState<Record<string, string>>({})
   const [dropping, setDropping] = useState(false)
+  /**
+   * What is selected right now, so the format bar can light up the marks the
+   * words already carry. Kept from `selectionchange` rather than from React's
+   * events, which never fire for a drag across text or a double-click.
+   */
+  const [range, setRange] = useState<{ blockId: string; start: number; end: number } | null>(null)
   // The pointer handlers read the live value here; `drag` only drives rendering.
   const dragRef = useRef<DragState | null>(null)
   const blocksRef = useRef(note.blocks)
   blocksRef.current = note.blocks
 
   const hidden = useMemo(() => hiddenBlockIds(note.blocks), [note.blocks])
+
+  useEffect(() => {
+    const read = () => {
+      const node = window.getSelection()?.anchorNode ?? null
+      const host = (node instanceof HTMLElement ? node : node?.parentElement)?.closest<HTMLElement>(
+        '.blk__text',
+      )
+      const blockId = host?.closest<HTMLElement>('[data-block-id]')?.dataset.blockId
+      const at = host && blockId ? selectionRange(host) : null
+      setRange((current) => {
+        if (!at || !blockId) return current === null ? current : null
+        if (current && current.blockId === blockId && current.start === at.start && current.end === at.end) {
+          return current
+        }
+        return { blockId, start: at.start, end: at.end }
+      })
+    }
+    document.addEventListener('selectionchange', read)
+    return () => document.removeEventListener('selectionchange', read)
+  }, [])
 
   const commit = useCallback(
     (next: Block[]) => {
@@ -55,6 +94,102 @@ export function BlockEditor({ note }: { note: Note }) {
       commit(blocksRef.current.map((b) => (b.id === id ? { ...b, ...patch } : b))),
     [commit],
   )
+
+  /* ---------------------------------------------------------------- */
+  /* Formatting                                                        */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * The block the format bar is about.
+   *
+   * Not simply the focused one: the bar's own buttons refuse the pointer so
+   * focus never leaves the text, but a tap on the page's blank space does move
+   * it, and the bar should not blink out of existence for that. It goes when
+   * focus lands somewhere else entirely, or on Escape.
+   */
+  const [barId, setBarId] = useState<string | null>(null)
+  const barBlock = note.blocks.find((b) => b.id === barId) ?? null
+
+  useEffect(() => setBarId(null), [note.id])
+
+  useEffect(() => {
+    const onFocusOut = (e: FocusEvent) => {
+      const to = e.relatedTarget as HTMLElement | null
+      if (!to || to.closest('.page') || to.closest('.fmt')) return
+      setBarId(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setBarId(null)
+    }
+    document.addEventListener('focusout', onFocusOut)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('focusout', onFocusOut)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
+  /** Which marks the selection already carries, for the bar's pressed states. */
+  const marks = useMemo(() => {
+    const on = new Set<MarkName>()
+    if (!barBlock || range?.blockId !== barBlock.id) return on
+    for (const [name, marker] of Object.entries(MARKERS)) {
+      if (hasMark(barBlock.text, range.start, range.end, marker)) on.add(name as MarkName)
+    }
+    return on
+  }, [barBlock, range])
+
+  /** Mark the selection, and keep it, so bold and then italic reach the same words. */
+  function applyMark(name: MarkName) {
+    if (!barBlock || range?.blockId !== barBlock.id || range.start === range.end) return
+    const result = toggleMark(barBlock.text, range.start, range.end, MARKERS[name])
+    patchBlock(barBlock.id, { text: result.text })
+    selectBlockRange(barBlock.id, result.start, result.end)
+    setRange({ blockId: barBlock.id, start: result.start, end: result.end })
+  }
+
+  /**
+   * Change a block's type, keeping what still applies.
+   *
+   * Its colour and background survive -- they belong to the writing rather
+   * than to the shape of it -- but a checkbox, a fold or a table's grid are
+   * the new type's to seed.
+   */
+  const turnInto = useCallback(
+    (block: Block, type: BlockType) => {
+      const fresh = emptyBlock(type, block.indent)
+      commit(
+        blocksRef.current.map((b) =>
+          b.id === block.id
+            ? {
+                ...b,
+                type,
+                checked: fresh.checked,
+                collapsed: fresh.collapsed,
+                tint: type === 'callout' ? (b.tint ?? fresh.tint) : b.tint,
+                icon: type === 'callout' ? (b.icon ?? fresh.icon) : undefined,
+                rows: fresh.rows,
+              }
+            : b,
+        ),
+      )
+    },
+    [commit],
+  )
+
+  /** Indent one level, within the same rule the Tab key follows. */
+  function indentBy(delta: 1 | -1) {
+    if (!barBlock) return
+    const blocks = blocksRef.current
+    const index = blocks.findIndex((b) => b.id === barBlock.id)
+    const previous = blocks[index - 1]
+    if (delta === -1) {
+      if (barBlock.indent > 0) patchBlock(barBlock.id, { indent: barBlock.indent - 1 })
+    } else if (previous && barBlock.indent <= previous.indent) {
+      patchBlock(barBlock.id, { indent: barBlock.indent + 1 })
+    }
+    focusBlock(barBlock.id, range?.end ?? 'end')
+  }
 
   /* ---------------------------------------------------------------- */
   /* Typing                                                            */
@@ -103,16 +238,14 @@ export function BlockEditor({ note }: { note: Note }) {
     const blocks = blocksRef.current
     const meta = e.metaKey || e.ctrlKey
 
-    if (meta && ['b', 'i', 'e'].includes(e.key.toLowerCase())) {
+    const shortcut = meta ? SHORTCUT_MARKS[`${e.shiftKey ? 'shift+' : ''}${e.key.toLowerCase()}`] : undefined
+    if (shortcut) {
       e.preventDefault()
-      const marker = e.key.toLowerCase() === 'b' ? '**' : e.key.toLowerCase() === 'i' ? '*' : '`'
-      const selection = window.getSelection()
-      if (!selection || selection.isCollapsed) return
-      const end = getCaretOffset(el)
-      const start = end - selection.toString().length
-      const result = toggleMark(block.text, start, end, marker)
+      const at = selectionRange(el)
+      if (!at || at.start === at.end) return
+      const result = toggleMark(block.text, at.start, at.end, MARKERS[shortcut])
       patchBlock(block.id, { text: result.text })
-      focusBlock(block.id, result.end)
+      selectBlockRange(block.id, result.start, result.end)
       return
     }
 
@@ -466,7 +599,10 @@ export function BlockEditor({ note }: { note: Note }) {
   const menuBlock = menu ? note.blocks.find((b) => b.id === menu.blockId) : null
 
   return (
-    <div className="page">
+    <div
+      className={`page note-font--${note.font ?? 'system'}`}
+      style={{ '--note-scale': note.fontScale ?? 1 } as React.CSSProperties}
+    >
       <div className="page__header">
         <button
           type="button"
@@ -519,7 +655,10 @@ export function BlockEditor({ note }: { note: Note }) {
                 dragging={drag?.id === block.id}
                 onChange={(text) => onChange(block, text)}
                 onKeyDown={(e, el) => onKeyDown(e, el, block, index)}
-                onFocus={() => setActiveId(block.id)}
+                onFocus={() => {
+                  setActiveId(block.id)
+                  setBarId(block.id)
+                }}
                 // Focus moving to another block sets its id straight after.
                 onBlur={() => setActiveId((current) => (current === block.id ? null : current))}
                 onToggleCheck={() => patchBlock(block.id, { checked: !block.checked })}
@@ -558,6 +697,24 @@ export function BlockEditor({ note }: { note: Note }) {
         </button>
       </div>
 
+      {barBlock && (
+        <FormatBar
+          note={note}
+          block={barBlock}
+          marks={marks}
+          onMark={applyMark}
+          onStyle={(type) => {
+            turnInto(barBlock, type)
+            focusBlock(barBlock.id, range?.end ?? 'end')
+          }}
+          onIndent={indentBy}
+          onColor={(color) => patchBlock(barBlock.id, { color })}
+          onBackground={(tint) => patchBlock(barBlock.id, { tint })}
+          onFont={(font: NoteFont) => updateNote(note.id, { font })}
+          onScale={(fontScale) => updateNote(note.id, { fontScale })}
+        />
+      )}
+
       <Backlinks note={note} />
 
       {iconAnchor && (
@@ -595,15 +752,7 @@ export function BlockEditor({ note }: { note: Note }) {
           position={{ top: menu.top, left: menu.left }}
           onClose={() => setMenu(null)}
           onTurnInto={(type) => {
-            const fresh = emptyBlock(type, menuBlock.indent)
-            patchBlock(menuBlock.id, {
-              type,
-              checked: fresh.checked,
-              collapsed: fresh.collapsed,
-              tint: type === 'callout' ? (menuBlock.tint ?? fresh.tint) : undefined,
-              icon: type === 'callout' ? (menuBlock.icon ?? fresh.icon) : undefined,
-              rows: fresh.rows,
-            })
+            turnInto(menuBlock, type)
             setMenu(null)
           }}
           onTint={(tint: TintName) => {

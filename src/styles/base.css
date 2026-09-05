@@ -93,6 +93,21 @@ textarea {
 .tint-brown { --tint: var(--tint-brown); --tint-bg: var(--tint-bg-brown); }
 .tint-gray { --tint: var(--tint-gray); --tint-bg: var(--tint-bg-gray); }
 
+/* Text colour, kept apart from --tint so a block can carry both. */
+.ink-red { --ink: var(--tint-red); }
+.ink-orange { --ink: var(--tint-orange); }
+.ink-yellow { --ink: var(--tint-yellow); }
+.ink-green { --ink: var(--tint-green); }
+.ink-mint { --ink: var(--tint-mint); }
+.ink-teal { --ink: var(--tint-teal); }
+.ink-cyan { --ink: var(--tint-cyan); }
+.ink-blue { --ink: var(--tint-blue); }
+.ink-indigo { --ink: var(--tint-indigo); }
+.ink-purple { --ink: var(--tint-purple); }
+.ink-pink { --ink: var(--tint-pink); }
+.ink-brown { --ink: var(--tint-brown); }
+.ink-gray { --ink: var(--tint-gray); }
+
 .sr-only {
   position: absolute;
   width: 1px;

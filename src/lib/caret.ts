@@ -72,3 +72,56 @@ export function focusBlock(blockId: string, offset: number | 'end' = 'end', atte
     setCaretOffset(el, offset === 'end' ? (el.textContent?.length ?? 0) : offset)
   })
 }
+
+/**
+ * The selected range inside `el`, in character offsets.
+ *
+ * `getCaretOffset` answers where the caret is, which is the end of a forward
+ * selection and the start of a backward one. The format bar needs both ends
+ * whichever way the selection was made, so this measures them separately.
+ * Returns null when the selection is somewhere else entirely.
+ */
+export function selectionRange(el: HTMLElement): { start: number; end: number } | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+  const range = selection.getRangeAt(0)
+  if (!el.contains(range.commonAncestorContainer)) return null
+
+  const measure = (node: Node, offset: number) => {
+    const pre = range.cloneRange()
+    pre.selectNodeContents(el)
+    pre.setEnd(node, offset)
+    return pre.toString().length
+  }
+  return { start: measure(range.startContainer, range.startOffset), end: measure(range.endContainer, range.endOffset) }
+}
+
+/**
+ * Focus a block and select `start`..`end` of its text.
+ *
+ * Formatting keeps the selection rather than collapsing it, so bold and then
+ * italic apply to the same words -- which is how anyone uses a format bar.
+ */
+export function selectBlockRange(blockId: string, start: number, end: number, attempt = 0): void {
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"] .blk__text`)
+    if (!el) {
+      if (attempt < 8) selectBlockRange(blockId, start, end, attempt + 1)
+      return
+    }
+    el.focus()
+    setCaretOffset(el, start)
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    const range = selection.getRangeAt(0)
+    // Extend from the collapsed caret rather than walking the tree twice.
+    const from = { node: range.startContainer, offset: range.startOffset }
+    setCaretOffset(el, end)
+    const to = selection.getRangeAt(0)
+    const full = document.createRange()
+    full.setStart(from.node, from.offset)
+    full.setEnd(to.startContainer, to.startOffset)
+    selection.removeAllRanges()
+    selection.addRange(full)
+  })
+}

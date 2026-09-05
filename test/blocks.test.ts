@@ -4,7 +4,7 @@ import {
   blocksToMarkdown, blocksToText, emptyBlock, hasChildren, hiddenBlockIds,
   markdownToBlocks, matchShortcut, orderedIndex,
 } from '../src/lib/blocks.ts'
-import { decorateInline, toggleMark } from '../src/lib/inline.ts'
+import { decorateInline, hasMark, MARKERS, toggleMark } from '../src/lib/inline.ts'
 import type { Block, Note, Reminder } from '../src/types.ts'
 import { noteToMarkdown, remindersToText, shareFilename } from '../src/lib/share.ts'
 import { canDropPage, noteTree, reorderedSiblings } from '../src/lib/notes.ts'
@@ -143,6 +143,43 @@ test('toggling an already-marked selection unwraps it', () => {
 
 test('toggling an empty selection changes nothing', () => {
   assert.deepEqual(toggleMark('abc', 1, 1, '**'), { text: 'abc', start: 1, end: 1 })
+})
+
+test('underline and highlight are marks like the rest', () => {
+  const text = 'an __underline__ and a ==highlight=='
+  const html = decorateInline(text)
+  assert.equal(html.replace(/<[^>]+>/g, ''), text)
+  assert.ok(html.includes('<u>underline</u>'))
+  assert.ok(html.includes('<mark>highlight</mark>'))
+})
+
+test('marks stack, and each one can be taken off again', () => {
+  let result = toggleMark('hello world', 6, 11, MARKERS.bold)
+  result = toggleMark(result.text, result.start, result.end, MARKERS.underline)
+  assert.equal(result.text, 'hello **__world__**')
+  assert.equal(result.text.slice(result.start, result.end), 'world')
+
+  const off = toggleMark(result.text, result.start, result.end, MARKERS.underline)
+  assert.equal(off.text, 'hello **world**')
+})
+
+test('bold is not read as italics, though both are asterisks', () => {
+  // `**bold**` puts a `*` either side of the word, which the naive test for an
+  // italic marker matches -- so bold text lit the italic button, and asking
+  // for italics unwrapped the bold instead.
+  const bold = toggleMark('hello world', 6, 11, MARKERS.bold)
+  assert.equal(hasMark(bold.text, bold.start, bold.end, MARKERS.bold), true)
+  assert.equal(hasMark(bold.text, bold.start, bold.end, MARKERS.italic), false)
+
+  const italic = toggleMark(bold.text, bold.start, bold.end, MARKERS.italic)
+  assert.equal(italic.text, 'hello ***world***')
+  assert.equal(italic.text.slice(italic.start, italic.end), 'world')
+})
+
+test('a mark is recognised whether it is inside the selection or around it', () => {
+  assert.equal(hasMark('a ==lit== word', 2, 9, MARKERS.highlight), true, 'selection includes the markers')
+  assert.equal(hasMark('a ==lit== word', 4, 7, MARKERS.highlight), true, 'selection is the words themselves')
+  assert.equal(hasMark('a lit word', 2, 5, MARKERS.highlight), false)
 })
 
 test('a picture survives a copy out as a markdown image', () => {

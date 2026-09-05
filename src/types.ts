@@ -262,7 +262,24 @@ export interface Block {
   url?: string
   /** `table` only: rows of cells, the first being the header. `text` is a caption. */
   rows?: string[][]
+  /**
+   * Text colour, from the tint palette. `tint` is the background, which the
+   * callout has always used and any block can now carry.
+   */
+  color?: TintName
 }
+
+/**
+ * A page's typeface.
+ *
+ * Every one of these resolves to a face the device already has -- on iOS,
+ * `ui-rounded` is SF Rounded and `ui-serif` is New York -- so a chosen font
+ * costs nothing to download and cannot fail to load.
+ */
+export type NoteFont = 'system' | 'serif' | 'rounded' | 'mono'
+
+/** The sizes the format sheet offers, as a multiplier on the page's text. */
+export const NOTE_SCALES = [0.85, 1, 1.15, 1.35] as const
 
 export interface Note {
   id: ID
@@ -284,6 +301,10 @@ export interface Note {
   tags: ID[]
   createdAt: string
   updatedAt: string
+  /** Chosen in the format sheet, and a property of the page rather than the app. */
+  font?: NoteFont
+  /** Text size, one of NOTE_SCALES. Absent means 1. */
+  fontScale?: number
   /** Set when the page is archived: out of the way, but not deleted. */
   archivedAt?: string
   trashedAt?: string

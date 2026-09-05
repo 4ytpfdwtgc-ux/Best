@@ -78,6 +78,8 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-window);
+  /* The format bar hangs off the bottom of the pane rather than the page. */
+  position: relative;
 }
 .editor__bar {
   height: var(--toolbar-h);
@@ -126,7 +128,24 @@
   max-width: 708px;
   margin: 0 auto;
   padding: 40px 54px 0;
+  /*
+   * The page's own text size. Everything a writer reads is sized from this in
+   * em, so the format sheet's A/A changes the prose and leaves the chrome --
+   * captions, table cells, file names -- where it is.
+   */
+  font-size: calc(16px * var(--note-scale, 1));
 }
+
+/*
+ * Page typefaces. Each one names faces the device already has, so choosing a
+ * font costs nothing to download: on iOS `ui-rounded` is SF Rounded and
+ * `ui-serif` is New York.
+ */
+.note-font--system { --note-face: var(--font); }
+.note-font--serif { --note-face: ui-serif, 'New York', Georgia, 'Times New Roman', serif; }
+.note-font--rounded { --note-face: ui-rounded, 'SF Pro Rounded', 'Nunito', var(--font); }
+.note-font--mono { --note-face: var(--font-mono); }
+.page { font-family: var(--note-face, var(--font)); }
 .page__header { margin-bottom: 6px; }
 .page__icon {
   font-size: 40px;
@@ -142,7 +161,8 @@
 .page__title {
   display: block;
   width: 100%;
-  font-size: 40px;
+  font-family: inherit;
+  font-size: 2.5em;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -158,7 +178,7 @@
   text-align: left;
   padding: 6px 2px;
   color: transparent;
-  font-size: 16px;
+  font-size: 1em;
   min-height: 120px;
 }
 .page__blocks:hover .page__tail { color: var(--text-tertiary); }
@@ -207,7 +227,7 @@
 .blk__text {
   flex: 1;
   min-width: 0;
-  font-size: 16px;
+  font-size: 1em;
   line-height: 1.5;
   outline: none;
   white-space: pre-wrap;
@@ -230,9 +250,9 @@
   border-radius: var(--radius-sm);
 }
 
-.blk--h1 .blk__text { font-size: 30px; font-weight: 600; line-height: 1.3; }
-.blk--h2 .blk__text { font-size: 24px; font-weight: 600; line-height: 1.3; }
-.blk--h3 .blk__text { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.blk--h1 .blk__text { font-size: 1.875em; font-weight: 600; line-height: 1.3; }
+.blk--h2 .blk__text { font-size: 1.5em; font-weight: 600; line-height: 1.3; }
+.blk--h3 .blk__text { font-size: 1.25em; font-weight: 600; line-height: 1.3; }
 .blk--h1 { margin-top: 26px; }
 .blk--h2 { margin-top: 20px; }
 .blk--h3 { margin-top: 14px; }
@@ -876,3 +896,173 @@
   cursor: pointer;
 }
 .note-row__destroy:hover { background: var(--bg-hover); color: var(--tint-red); }
+
+/* Colour and background on any block ------------------------------- */
+
+.blk--inked .blk__text,
+.blk--inked .blk__number,
+.blk--inked .blk__bullet { color: var(--ink); }
+
+/*
+ * A background needs room around the words, which a plain block does not
+ * have. The callout draws its own and is left alone.
+ */
+.blk.is-tinted {
+  background: var(--tint-bg);
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Inline marks ------------------------------------------------------ */
+
+.blk__text u { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.blk__text mark {
+  background: var(--tint-bg-yellow);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0.05em 0.1em;
+}
+
+/* The format bar --------------------------------------------------- */
+
+/*
+ * Docked to the bottom of the pane, not to the page inside it: the page
+ * scrolls and the bar must not, and a sticky element inside a scrolling column
+ * of blocks lands wherever the column happens to end.
+ */
+.fmt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 12px;
+  /* Set from the visual viewport, so the bar clears the on-screen keyboard. */
+  transform: translateY(calc(-1 * var(--keyboard, 0px)));
+  transition: transform 0.12s var(--ease);
+  pointer-events: none;
+}
+.fmt > * {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.fmt__bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-window);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fmt__bar::-webkit-scrollbar { display: none; }
+
+.fmt__btn {
+  flex: none;
+  min-width: 32px;
+  height: 30px;
+  padding: 0 7px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+.fmt__btn:hover:not(:disabled) { background: var(--bg-hover); }
+.fmt__btn.is-on { background: var(--bg-hover); color: var(--accent); }
+.fmt__btn:disabled { opacity: 0.35; cursor: default; }
+.fmt__aa { font-size: 15px; font-weight: 600; }
+.fmt__b { font-weight: 700; }
+.fmt__i { font-style: italic; font-family: var(--font-serif, serif); }
+.fmt__u { text-decoration: underline; text-underline-offset: 2px; }
+.fmt__s { text-decoration: line-through; }
+.fmt__hl { background-image: linear-gradient(var(--tint-bg-yellow), var(--tint-bg-yellow)); background-size: 100% 60%; background-position: 0 80%; background-repeat: no-repeat; }
+.fmt__code { font-family: var(--font-mono); font-size: 12px; }
+.fmt__sep { flex: none; width: 1px; height: 18px; margin: 0 4px; background: var(--line); }
+
+.fmt__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-window);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+.fmt__group { display: flex; flex-direction: column; gap: 6px; }
+.fmt__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.fmt__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.fmt__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.fmt__choice:hover { background: var(--bg-hover); }
+.fmt__choice.is-on { border-color: var(--accent); color: var(--accent); background: var(--bg-hover); }
+.fmt__glyph { font-size: 12px; color: var(--text-tertiary); }
+.fmt__choice.is-on .fmt__glyph { color: inherit; }
+.fmt__style--h1 { font-size: 17px; font-weight: 700; }
+.fmt__style--h2 { font-size: 15px; font-weight: 600; }
+.fmt__style--h3 { font-size: 14px; font-weight: 600; }
+.fmt__style--code { font-family: var(--font-mono); font-size: 12px; }
+.fmt__font { font-family: var(--note-face, var(--font)); }
+
+.fmt__sizes { display: inline-flex; gap: 4px; margin-left: auto; }
+.fmt__size {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.fmt__size--big { font-size: 17px; font-weight: 600; }
+.fmt__size:disabled { opacity: 0.35; cursor: default; }
+
+.fmt__swatch {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--tint);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+.fmt__swatch--filled { background: var(--tint-bg); }
+.fmt__swatch--none {
+  background: var(--bg);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1;
+}
+.fmt__swatch.is-on { border-color: var(--accent); }
