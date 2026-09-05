@@ -24,6 +24,11 @@ export interface GraphNode {
   y: number
   vx: number
   vy: number
+  /** Where it settled, and what it floats around afterwards. */
+  homeX?: number
+  homeY?: number
+  /** Its own place in the drift, so no two pages sway together. */
+  seed: number
   /** Held by a pointer: the simulation moves everything except this. */
   pinned?: boolean
 }
@@ -71,7 +76,9 @@ export function buildGraph(notes: Note[], options: BuildOptions = {}): Graph {
   const seen = new Set<string>()
 
   const add = (id: string, title: string, folderId?: ID, ghost?: boolean) => {
-    if (!nodes.has(id)) nodes.set(id, { id, title, folderId, ghost, degree: 0, x: 0, y: 0, vx: 0, vy: 0 })
+    if (!nodes.has(id)) {
+      nodes.set(id, { id, title, folderId, ghost, degree: 0, x: 0, y: 0, vx: 0, vy: 0, seed: seedFor(id) })
+    }
     return nodes.get(id)!
   }
   const join = (source: string, target: string, nested?: boolean) => {
@@ -121,6 +128,19 @@ function finish(nodes: GraphNode[], links: GraphLink[]): Graph {
     degree.set(link.target, (degree.get(link.target) ?? 0) + 1)
   }
   return { nodes: nodes.map((n) => ({ ...n, degree: degree.get(n.id) ?? 0 })), links }
+}
+
+/**
+ * A number between 0 and 2π that belongs to this page and no other.
+ *
+ * The drift is a sine wave, and a page's seed is where in the wave it starts.
+ * Taken from the id rather than from a random number, so a page sways the same
+ * way every time the web is opened -- and so no two pages sway in step.
+ */
+function seedFor(id: string): number {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0
+  return ((hash >>> 0) % 6283) / 1000
 }
 
 /**
@@ -254,6 +274,45 @@ export function tick(
     }
     node.vx = (node.vx - node.x * forces.center * alpha) * DAMPING
     node.vy = (node.vy - node.y * forces.center * alpha) * DAMPING
+    node.x += node.vx
+    node.y += node.vy
+  }
+}
+
+/**
+ * Remember where everything settled. What it floats around from now on.
+ */
+export function anchor(graph: Graph): void {
+  for (const node of graph.nodes) {
+    node.homeX = node.x
+    node.homeY = node.y
+  }
+}
+
+/** How hard the drift pushes, and how firmly a page is held to where it settled. */
+const WANDER = 0.07
+const HOME_PULL = 0.02
+
+/**
+ * The web breathing.
+ *
+ * Once the simulation has settled, the pages keep moving a little rather than
+ * freezing into a diagram -- it reads as something alive, and a web that
+ * shifts slightly is easier to follow when it does rearrange. Each page is
+ * pushed by a slow sine of its own and pulled back towards where it settled,
+ * which bounds the wander to a few units: a sway, not a drift away.
+ *
+ * This is O(n) and runs in place of the full simulation, not beside it. The
+ * repulsion is the expensive half and it has nothing to do once everything has
+ * found its place.
+ */
+export function float(graph: Graph, seconds: number): void {
+  for (const node of graph.nodes) {
+    if (node.pinned) continue
+    const homeX = node.homeX ?? node.x
+    const homeY = node.homeY ?? node.y
+    node.vx = (node.vx + Math.sin(seconds * 0.7 + node.seed) * WANDER + (homeX - node.x) * HOME_PULL) * DAMPING
+    node.vy = (node.vy + Math.cos(seconds * 0.53 + node.seed * 1.7) * WANDER + (homeY - node.y) * HOME_PULL) * DAMPING
     node.x += node.vx
     node.y += node.vy
   }

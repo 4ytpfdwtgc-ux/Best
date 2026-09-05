@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Note } from '../../types'
 import { useApp } from '../../state/store'
 import {
-  ALPHA_DECAY, ALPHA_MIN, ALPHA_START, DEFAULT_FORCES, buildGraph, graphBounds, neighbourhood,
-  nodeRadius, tick, type Forces, type Graph, type GraphNode,
+  ALPHA_DECAY, ALPHA_MIN, ALPHA_START, DEFAULT_FORCES, anchor, buildGraph, float, graphBounds,
+  neighbourhood, nodeRadius, tick, type Forces, type Graph, type GraphNode,
 } from '../../lib/graph'
 import { addNote, setSelectedNote, updateNote } from '../../state/actions'
 import { Icon } from '../ui/Icon'
@@ -285,14 +285,14 @@ export function GraphView({
          * and a fraction of the cost.
          */
         if (!node.ghost) {
-          context.globalAlpha = alpha * 0.22
+          context.globalAlpha = alpha * 0.13
           context.fillStyle = colour
           context.beginPath()
-          context.arc(node.x, node.y, radius * 1.9, 0, Math.PI * 2)
+          context.arc(node.x, node.y, radius * 1.3, 0, Math.PI * 2)
           context.fill()
         }
 
-        context.globalAlpha = alpha
+        context.globalAlpha = alpha * 0.92
         context.beginPath()
         context.arc(node.x, node.y, radius, 0, Math.PI * 2)
         /*
@@ -301,6 +301,9 @@ export function GraphView({
          */
         context.fillStyle = node.ghost ? paint.paper : colour
         context.fill()
+        // The dot lets a little of what is behind it through; its ring does
+        // not, so two that overlap still read as two.
+        context.globalAlpha = alpha
         context.strokeStyle = node.ghost ? paint.edge : paint.paper
         context.lineWidth = (node.ghost ? 2 : 1.5) * scale
         context.stroke()
@@ -313,6 +316,8 @@ export function GraphView({
         // Labels only where they can be read: close enough in, or the one
         // under the pointer. Otherwise the web disappears under its own names.
         if (node.id === near?.id || (labelsRef.current && camera.zoom > 0.55)) {
+          // A name is read, not glanced at: full strength, whatever the dot is.
+          context.globalAlpha = alpha
           context.font = `${11 * scale}px ${paint.font}`
           const y = node.y + radius + 3 * scale
           // Drawn on a halo of the background, so a name over a line is still
@@ -330,11 +335,14 @@ export function GraphView({
       context.globalAlpha = 1
     }
 
-    const loop = () => {
+    const loop = (now: number) => {
       const moving = alphaRef.current > ALPHA_MIN
       if (moving) {
         tick(graphRef.current, forcesRef.current, alphaRef.current, indexRef.current)
         alphaRef.current *= ALPHA_DECAY
+        // Settling has just finished: this is where everything lives now, and
+        // what it will sway around.
+        if (alphaRef.current <= ALPHA_MIN) anchor(graphRef.current)
         /*
          * A web spreads out as it settles, over several seconds. Framing it
          * once at the start would leave it hanging off the canvas, and framing
@@ -350,11 +358,22 @@ export function GraphView({
         dirtyRef.current = true
       }
 
+      /*
+       * Settled, but not stopped: the pages keep breathing. It is a handful of
+       * arithmetic per page and the drawing it was already doing -- the frames
+       * that used to cost were the ones resolving styles and forcing layout,
+       * and those are gone.
+       */
+      if (!moving && !document.hidden) {
+        float(graphRef.current, now / 1000)
+        dirtyRef.current = true
+      }
+
       if (dirtyRef.current) {
         dirtyRef.current = false
         draw()
       }
-      if (moving || dirtyRef.current) {
+      if (moving || dirtyRef.current || !document.hidden) {
         frameRef.current = requestAnimationFrame(loop)
       } else {
         runningRef.current = false
@@ -380,7 +399,12 @@ export function GraphView({
     })
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] })
 
+    // Nothing to breathe for while the app is in the background.
+    const wake = () => !document.hidden && kick()
+    document.addEventListener('visibilitychange', wake)
+
     return () => {
+      document.removeEventListener('visibilitychange', wake)
       cancelAnimationFrame(frameRef.current ?? 0)
       runningRef.current = false
       observer.disconnect()
@@ -507,6 +531,9 @@ export function GraphView({
     if (!drag) return
     if (drag.node) {
       drag.node.pinned = false
+      // Put down where it was dropped, and from now on it sways around there.
+      drag.node.homeX = drag.node.x
+      drag.node.homeY = drag.node.y
       reheat(0.3)
     }
     // A press that went nowhere is a tap, and a tap opens the page.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  buildGraph, DEFAULT_FORCES, graphBounds, neighbourhood, nodeRadius, tick,
+  anchor, buildGraph, DEFAULT_FORCES, float, graphBounds, neighbourhood, nodeRadius, tick,
 } from '../src/lib/graph.ts'
 import type { Note } from '../src/types.ts'
 
@@ -152,6 +152,55 @@ test('the web settles rather than drifting off the canvas', () => {
   const bounds = graphBounds(graph)
   assert.ok(Number.isFinite(bounds.width) && bounds.width < 4000, `width ${bounds.width}`)
   assert.ok(graph.nodes.every((n) => Number.isFinite(n.x) && Number.isFinite(n.y)))
+})
+
+test('once settled, pages sway around where they landed', () => {
+  const graph = buildGraph([page('One', 'see [[Two]]'), page('Two')], { nesting: false })
+  for (let i = 0; i < 400; i++) tick(graph, DEFAULT_FORCES, 1)
+  anchor(graph)
+  const home = graph.nodes.map((n) => ({ x: n.x, y: n.y }))
+
+  let moved = 0
+  let furthest = 0
+  for (let frame = 0; frame < 900; frame++) {
+    float(graph, frame / 60)
+    graph.nodes.forEach((n, i) => {
+      const away = Math.hypot(n.x - home[i].x, n.y - home[i].y)
+      furthest = Math.max(furthest, away)
+      if (away > 0.5) moved++
+    })
+  }
+  assert.ok(moved > 0, 'nothing moved at all')
+  // A sway, not a drift away: the pull home bounds how far it can get.
+  assert.ok(furthest > 1 && furthest < 12, `wandered ${furthest.toFixed(1)}`)
+})
+
+test('two pages do not sway in step', () => {
+  const graph = buildGraph([page('One'), page('Two')], { nesting: false })
+  anchor(graph)
+  for (let frame = 0; frame < 120; frame++) float(graph, frame / 60)
+  const [a, b] = graph.nodes
+  assert.notEqual(a.x - (a.homeX ?? 0), b.x - (b.homeX ?? 0))
+})
+
+test('the sway is the same every time the web is opened', () => {
+  const pages = [page('One'), page('Two'), page('Three')]
+  const run = () => {
+    const graph = buildGraph(pages, { nesting: false })
+    anchor(graph)
+    for (let frame = 0; frame < 60; frame++) float(graph, frame / 60)
+    return graph.nodes.map((n) => [Math.round(n.x * 100), Math.round(n.y * 100)])
+  }
+  assert.deepEqual(run(), run())
+})
+
+test('a page held by a finger does not float away from it', () => {
+  const graph = buildGraph([page('One'), page('Two')], { nesting: false })
+  anchor(graph)
+  graph.nodes[0].pinned = true
+  const held = { x: graph.nodes[0].x, y: graph.nodes[0].y }
+  for (let frame = 0; frame < 120; frame++) float(graph, frame / 60)
+  assert.deepEqual({ x: graph.nodes[0].x, y: graph.nodes[0].y }, held)
 })
 
 test('a page with more links is a bigger dot', () => {
