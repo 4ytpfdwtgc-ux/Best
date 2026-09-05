@@ -55,6 +55,31 @@ test('a page nested inside another is joined to it, unless nesting is off', () =
   assert.equal(buildGraph([parent, child], { nesting: false }).links.length, 0)
 })
 
+test('a page with pages inside it is marked as the top of a nest', () => {
+  const parent = page('Parent')
+  const child = page('Child', '', { parentId: parent.id })
+  const alone = page('Alone')
+  const graph = buildGraph([parent, child, alone])
+  assert.deepEqual(
+    graph.nodes.map((n) => [n.title, !!n.parent]),
+    [['Parent', true], ['Child', false], ['Alone', false]],
+  )
+})
+
+test('what a page is does not depend on whether nesting is drawn', () => {
+  const parent = page('Parent')
+  const child = page('Child', '', { parentId: parent.id })
+  const graph = buildGraph([parent, child], { nesting: false })
+  assert.equal(graph.links.length, 0)
+  assert.equal(graph.nodes[0].parent, true)
+})
+
+test('a page whose only child is in the trash holds nothing', () => {
+  const parent = page('Parent')
+  const child = page('Child', '', { parentId: parent.id, trashedAt: '2026-01-02T00:00:00.000Z' })
+  assert.equal(buildGraph([parent, child]).nodes[0].parent, false)
+})
+
 test('a page in the trash is not on the web at all', () => {
   const a = page('Alpha', 'see [[Bravo]]')
   const b = page('Bravo', '', { trashedAt: '2026-01-02T00:00:00.000Z' })

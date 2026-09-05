@@ -18,6 +18,8 @@ export interface GraphNode {
   folderId?: ID
   /** Linked to from somewhere, but nobody has written it yet. */
   ghost?: boolean
+  /** Has pages nested inside it: the top of a branch. */
+  parent?: boolean
   /** How many edges touch it, which is what sizes the dot. */
   degree: number
   x: number
@@ -92,7 +94,12 @@ export function buildGraph(notes: Note[], options: BuildOptions = {}): Graph {
     nodes.get(target)!.degree++
   }
 
-  for (const note of live) add(note.id, noteTitle(note), note.folderId)
+  // A page at the top of a nest is marked as one, whether or not the nesting
+  // edges are being drawn: what it is does not depend on what is shown.
+  const parents = new Set(live.map((n) => n.parentId).filter(Boolean) as ID[])
+  for (const note of live) {
+    add(note.id, noteTitle(note), note.folderId).parent = parents.has(note.id)
+  }
 
   for (const note of live) {
     for (const name of wikiLinksIn(note)) {

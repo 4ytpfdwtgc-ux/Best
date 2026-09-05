@@ -48,8 +48,18 @@ const NEON = [
   '#8b5cff', // violet
   '#00d2c3', // turquoise
   '#ff3860', // red
-  '#ffb300', // amber
+  '#b388ff', // lavender
 ]
+
+/**
+ * A page with pages nested inside it -- the top of a branch -- is yellow
+ * whatever folder it is in, so the shape of the library shows through the
+ * colours. Yellow is kept out of the folder cycle above, or a folder's pages
+ * would be indistinguishable from the pages that hold others.
+ *
+ * Deep enough to read on white: a true #ffff00 disappears on it.
+ */
+const PARENT_INK = '#ffb300'
 
 /** The unwritten ones have no folder to take a colour from. */
 const GHOST_INK = '#9b9a97'
@@ -143,6 +153,7 @@ export function GraphView({
   const folderColour = useCallback(
     (node: GraphNode) => {
       if (node.ghost) return GHOST_INK
+      if (node.parent) return PARENT_INK
       return (node.folderId && folderInk.get(node.folderId)) || NEON[0]
     },
     [folderInk],
