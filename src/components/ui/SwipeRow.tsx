@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TintName } from '../../types'
 import {
   RELEASE_GESTURES, SWIPE_COLLAPSE_MS, SWIPE_COMMIT, SWIPE_EXIT_MS, SWIPE_SLOP,
+  suppressSelection,
 } from '../../lib/gestures'
 import { Icon } from './Icon'
 
@@ -54,6 +55,7 @@ export function SwipeRow({
     const startX = e.clientX
     const startY = e.clientY
     let engaged = false
+    let release: (() => void) | undefined
     swipedRef.current = false
 
     const onMove = (ev: PointerEvent) => {
@@ -66,6 +68,7 @@ export function SwipeRow({
         if (Math.abs(dx) < SWIPE_SLOP) return
         engaged = true
         swipedRef.current = true
+        release = suppressSelection()
         setSettling(false)
       }
 
@@ -127,6 +130,8 @@ export function SwipeRow({
     }
 
     const cleanup = () => {
+      release?.()
+      release = undefined
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onCancel)

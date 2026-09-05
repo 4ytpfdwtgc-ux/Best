@@ -282,6 +282,14 @@ commit, a drag needs 6px, and a finger holds for half a second before it picks
 anything up. They used to be five magic numbers in five files, which meant
 "the app is too twitchy" had no single answer.
 
+An engaged gesture also takes text selection out of the way. A press-and-hold
+is how a page is picked up and also how every platform begins selecting text —
+on iOS it raises the magnifier and the copy/paste callout too — so without this
+the drag happens under a spreading highlight. `suppressSelection()` counts
+nested gestures so one ending does not lift a suppression another still needs,
+and the rows and chips whose own gesture is a hold decline selection outright.
+Prose is untouched: the page editor and every input stay selectable.
+
 A note row is both a swipe row and something that can be picked up, and one
 pointer reaches both handlers. Moving first is a swipe; holding first picks the
 page up, and the winner fires `releaseOtherGestures()` so the loser springs

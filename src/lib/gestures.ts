@@ -73,3 +73,50 @@ export const RELEASE_GESTURES = 'cadence:release-gestures'
 export function releaseOtherGestures(): void {
   window.dispatchEvent(new Event(RELEASE_GESTURES))
 }
+
+/* ------------------------------------------------------------------ */
+/* Keeping a gesture clear of text selection                           */
+/* ------------------------------------------------------------------ */
+
+/** Set on the root while a gesture owns the pointer. */
+export const DRAGGING_CLASS = 'is-gesturing'
+
+let suppressions = 0
+
+/**
+ * Stop the browser selecting text while a gesture is running.
+ *
+ * A press-and-hold is how a page is picked up, and it is also how every
+ * platform starts selecting text — on iOS it raises the magnifier and the
+ * copy/paste callout as well. So the two fire together and the drag happens
+ * underneath a growing blue highlight.
+ *
+ * Nested gestures are counted rather than assumed away, so one ending does not
+ * lift the suppression another still needs. Returns the release.
+ */
+export function suppressSelection(): () => void {
+  suppressions++
+  if (suppressions === 1) {
+    document.documentElement.classList.add(DRAGGING_CLASS)
+    document.addEventListener('selectstart', preventSelect)
+  }
+  // Anything already selected when the gesture began goes too, or it stays
+  // highlighted behind the drag.
+  const selection = window.getSelection()
+  if (selection && !selection.isCollapsed) selection.removeAllRanges()
+
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    suppressions = Math.max(0, suppressions - 1)
+    if (suppressions === 0) {
+      document.documentElement.classList.remove(DRAGGING_CLASS)
+      document.removeEventListener('selectstart', preventSelect)
+    }
+  }
+}
+
+function preventSelect(e: Event) {
+  e.preventDefault()
+}

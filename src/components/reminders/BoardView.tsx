@@ -5,7 +5,7 @@ import { addReminder, moveToGroup, setSelectedReminder, toggleReminder } from '.
 import { friendlyDate, todayISO } from '../../lib/date'
 import { Icon } from '../ui/Icon'
 import { PropertyValueView } from './Property'
-import { DRAG_SLOP } from '../../lib/gestures'
+import { DRAG_SLOP, suppressSelection } from '../../lib/gestures'
 
 /** Kanban board grouped by whatever the view's `groupBy` names. */
 export function BoardView({
@@ -25,6 +25,7 @@ export function BoardView({
     e.preventDefault()
     const origin = { x: e.clientX, y: e.clientY }
     let moved = false
+    const release = suppressSelection()
 
     const onMove = (ev: PointerEvent) => {
       // Enough slop that a click is never read as a drag.
@@ -38,6 +39,7 @@ export function BoardView({
     }
 
     const onUp = () => {
+      release()
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)

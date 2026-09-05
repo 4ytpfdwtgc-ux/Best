@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
 import { canDropPage, noteTree } from '../../lib/notes'
-import { MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, releaseOtherGestures } from '../../lib/gestures'
+import {
+  MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, releaseOtherGestures, suppressSelection,
+} from '../../lib/gestures'
 import {
   addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, moveNoteToFolder,
   noteTitle, reparentNote, setPrefs, setSelectedFolder, setSelectedNote, trashNote, unarchiveNote,
@@ -68,11 +70,14 @@ export function NotesApp({
     const touch = e.pointerType === 'touch'
     let engaged = false
     let holdTimer: number | undefined
+    let release: (() => void) | undefined
     draggedRef.current = false
 
     const engage = () => {
       engaged = true
       draggedRef.current = true
+      // The hold that picks a page up is also the one that starts selecting.
+      release = suppressSelection()
       /*
        * The row is also a swipe row, and both handlers see this one pointer.
        * Telling the swipe to let go is what stops a page dragged towards a
@@ -124,6 +129,8 @@ export function NotesApp({
 
     const cleanup = () => {
       window.clearTimeout(holdTimer)
+      release?.()
+      release = undefined
       pageDragRef.current = null
       setPageDrag(null)
       window.removeEventListener('pointermove', onMove)

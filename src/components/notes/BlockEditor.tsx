@@ -7,7 +7,7 @@ import {
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
 import { AssetError, putFile, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
-import { DRAG_SLOP } from '../../lib/gestures'
+import { DRAG_SLOP, suppressSelection } from '../../lib/gestures'
 import { toggleMark } from '../../lib/inline'
 import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
 import { backlinksTo, findNoteByTitle } from '../../state/selectors'
@@ -253,6 +253,7 @@ export function BlockEditor({ note }: { note: Note }) {
     e.preventDefault()
     const origin = { x: e.clientX, y: e.clientY }
     let moved = false
+    const release = suppressSelection()
 
     const onMove = (ev: PointerEvent) => {
       if (Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) < DRAG_SLOP) return
@@ -271,6 +272,7 @@ export function BlockEditor({ note }: { note: Note }) {
     }
 
     const onUp = () => {
+      release()
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)

@@ -112,3 +112,32 @@ textarea {
     transition-duration: 0.001ms !important;
   }
 }
+
+/*
+ * While a gesture owns the pointer, nothing is selectable. A press-and-hold is
+ * how a page is picked up and also how every platform starts selecting text,
+ * so without this the drag happens under a spreading highlight.
+ */
+html.is-gesturing,
+html.is-gesturing * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none;
+}
+html.is-gesturing { cursor: grabbing; }
+
+/*
+ * Rows and chips whose own gesture is a press-and-hold never offer selection,
+ * so the two cannot start together in the first place. Prose is untouched: the
+ * page editor, note bodies and every input stay selectable.
+ */
+.note-row,
+.db-row,
+.home__rem,
+.ev,
+.chip,
+.card {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

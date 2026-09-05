@@ -5,7 +5,7 @@ import {
   diffDays, formatHourLabel, formatTime, formatWeekdayShort, timeFromMinutes, todayISO,
 } from '../../lib/date'
 import { limitToTime, moveEvent, resizeEvent } from '../../lib/reschedule'
-import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP } from '../../lib/gestures'
+import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP, suppressSelection } from '../../lib/gestures'
 import { updateEvent } from '../../state/actions'
 
 const HOUR_PX = 46
@@ -64,9 +64,11 @@ export function TimeGrid({
     const touch = e.pointerType === 'touch'
     let engaged = false
     let holdTimer: number | undefined
+    let release: (() => void) | undefined
 
     const engage = () => {
       engaged = true
+      release = suppressSelection()
       movedRef.current = true
       dragRef.current = { id: occ.event.id, mode, minuteDelta: 0, dayDelta: 0 }
       setDrag(dragRef.current)
@@ -127,6 +129,8 @@ export function TimeGrid({
 
     const cleanup = () => {
       window.clearTimeout(holdTimer)
+      release?.()
+      release = undefined
       dragRef.current = null
       setDrag(null)
       window.removeEventListener('pointermove', onMove)
