@@ -88,6 +88,13 @@ const paths: Record<string, string> = {
    * survive 13px becomes a ring with radial ticks, which is the sun icon; this
    * stays legible and cannot be confused with anything else in the set.
    */
+  /* Three linked nodes: the web of pages. */
+  graph:
+    'M7.4 9.6l3.4-3M9.1 14.6l4.6 2.3M15.6 10.2l-2.4 4.4' +
+    'M5.6 8a2 2 0 104 0 2 2 0 00-4 0' +
+    'M13 6.4a2 2 0 104 0 2 2 0 00-4 0' +
+    'M5.6 16.6a2 2 0 104 0 2 2 0 00-4 0' +
+    'M14 18.4a2 2 0 104 0 2 2 0 00-4 0',
   gear:
     'M4 8.5h16M4 15.5h16' +
     'M17.4 8.5a2.4 2.4 0 10-4.8 0 2.4 2.4 0 004.8 0' +

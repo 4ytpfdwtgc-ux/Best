@@ -8,6 +8,30 @@ import type { ID, Note } from '../types.ts'
  * separate list of children.
  */
 
+/**
+ * What a page is called.
+ *
+ * A page with no title is named by its first line, the way Apple Notes does
+ * it, so an untitled page is still findable and linkable.
+ */
+export function noteTitle(note: { title: string; blocks: { text: string; type: string }[] }): string {
+  if (note.title.trim()) return note.title.trim()
+  const first = note.blocks.find((b) => b.text.trim() && b.type !== 'divider')
+  return first?.text.trim() || 'Untitled'
+}
+
+/** Every `[[Page]]` written in a page's blocks, in the order they appear. */
+export function wikiLinksIn(note: Note): string[] {
+  const found: string[] = []
+  for (const block of note.blocks) {
+    for (const match of block.text.matchAll(/\[\[([^\]\n]+)\]\]/g)) {
+      const name = match[1].trim()
+      if (name && !found.includes(name)) found.push(name)
+    }
+  }
+  return found
+}
+
 export interface NoteRow {
   note: Note
   depth: number

@@ -15,6 +15,7 @@ import { useIsPhone } from '../../lib/useMediaQuery'
 import { Icon, isIconName } from '../ui/Icon'
 import { EmptyState, ToolButton } from '../ui/primitives'
 import { NoteEditor } from './NoteEditor'
+import { GraphView } from './GraphView'
 import { SwipeRow } from '../ui/SwipeRow'
 
 export function NotesApp({
@@ -51,6 +52,12 @@ export function NotesApp({
     [notes, expanded, searching],
   )
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
+  /**
+   * The web, when it is open: the whole library, or one page's own corner of
+   * it. It stands in for the list and the editor rather than sitting beside
+   * them -- it is a way of looking at the same pages, not a third pane.
+   */
+  const [web, setWeb] = useState<{ focusId?: string } | null>(null)
   const inTrash = state.selectedFolderId === 'trash'
   const trashCount = state.notes.filter((n) => n.trashedAt).length
   const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
@@ -224,6 +231,14 @@ export function NotesApp({
           ? 'Archive'
           : (state.folders.find((f) => f.id === state.selectedFolderId)?.name ?? 'Notes')
 
+  if (web) {
+    return (
+      <div className="module">
+        <GraphView focusId={web.focusId} onClose={() => setWeb(null)} />
+      </div>
+    )
+  }
+
   return (
     <div className="module">
       {isPhone && sidebarOpen && (
@@ -362,6 +377,7 @@ export function NotesApp({
             <option value="title">Title</option>
             <option value="manual">Manual</option>
           </select>
+          <ToolButton icon="graph" label="Web of pages" onClick={() => setWeb({})} />
           {state.selectedFolderId === 'trash' ? (
             <ToolButton icon="trash" label="Empty trash" onClick={() => trashCount && emptyTrash()} />
           ) : (
@@ -519,6 +535,7 @@ export function NotesApp({
           key={selected.id}
           note={selected}
           onBack={isPhone ? () => setSelectedNote(null) : undefined}
+          onOpenWeb={() => setWeb({ focusId: selected.id })}
         />
       ) : isPhone ? null : (
         <section className="editor">

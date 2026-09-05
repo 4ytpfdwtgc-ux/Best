@@ -4,7 +4,7 @@ import type {
   Reminder, ReminderList, ReminderSelection, Tag, TintName, CalendarViewMode,
 } from '../types'
 import { getState, setState } from './store'
-import { noteWithDescendants, reorderedSiblings } from '../lib/notes'
+import { noteTitle, noteWithDescendants, reorderedSiblings } from '../lib/notes'
 import { pluck, spliceBack } from '../lib/records'
 import { lingerReminder, releaseReminder } from './linger'
 import { clearUndo, offerUndo } from './undo'
@@ -13,6 +13,8 @@ import { nowISO, todayISO } from '../lib/date'
 import { nextOccurrence } from '../lib/recurrence'
 import { emptyBlock, markdownToBlocks } from '../lib/blocks'
 import { PROP, STATUS } from './seed'
+
+export { noteTitle } from '../lib/notes'
 
 /* ------------------------------------------------------------------ */
 /* Taking a deletion back                                              */
@@ -896,12 +898,6 @@ export function moveBlock(noteId: ID, blockId: ID, toIndex: number) {
 }
 
 /** Title of a note, falling back to its first non-empty block. */
-export function noteTitle(note: { title: string; blocks: Block[] }): string {
-  if (note.title.trim()) return note.title.trim()
-  const first = note.blocks.find((b) => b.text.trim() && b.type !== 'divider')
-  return first?.text.trim() || 'Untitled'
-}
-
 function addHour(time: string): string {
   const [h, m] = time.split(':').map(Number)
   const total = Math.min(23 * 60 + 59, (h || 0) * 60 + (m || 0) + 60)

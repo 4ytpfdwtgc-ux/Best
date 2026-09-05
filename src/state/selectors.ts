@@ -7,7 +7,8 @@ import { convertWallTime, deviceZone } from '../lib/timezone'
 import { occurrencesInRange } from '../lib/recurrence'
 import { noteTitle } from './actions'
 import { blocksToText } from '../lib/blocks'
-export { noteAncestors, noteTree, noteWithDescendants, type NoteRow } from '../lib/notes'
+import { wikiLinksIn } from '../lib/notes'
+export { noteAncestors, noteTree, noteWithDescendants, wikiLinksIn, type NoteRow } from '../lib/notes'
 
 
 /* ------------------------------------------------------------------ */
@@ -271,18 +272,6 @@ export function referencedAssetIds(s: AppState): Set<ID> {
     for (const block of note.blocks) if (block.assetId) ids.add(block.assetId)
   }
   return ids
-}
-
-/** Every `[[Page]]` written in a page's blocks, in the order they appear. */
-export function wikiLinksIn(note: Note): string[] {
-  const found: string[] = []
-  for (const block of note.blocks) {
-    for (const match of block.text.matchAll(/\[\[([^\]\n]+)\]\]/g)) {
-      const name = match[1].trim()
-      if (name && !found.includes(name)) found.push(name)
-    }
-  }
-  return found
 }
 
 /** A page by its title, matched the way someone typing a link would expect. */

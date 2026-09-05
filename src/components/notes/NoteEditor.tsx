@@ -12,7 +12,16 @@ import { relativeStamp } from '../../lib/date'
 import { Icon } from '../ui/Icon'
 import { BlockEditor } from './BlockEditor'
 
-export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }) {
+export function NoteEditor({
+  note,
+  onBack,
+  onOpenWeb,
+}: {
+  note: Note
+  onBack?: () => void
+  /** Show this page's own corner of the web of pages. */
+  onOpenWeb?: () => void
+}) {
   const state = useApp()
   const [newTag, setNewTag] = useState('')
 
@@ -68,6 +77,17 @@ export function NoteEditor({ note, onBack }: { note: Note; onBack?: () => void }
         <div className="toolbar__spacer" />
 
         <span className="editor__stamp">Edited {relativeStamp(note.updatedAt)}</span>
+        {onOpenWeb && (
+          <button
+            type="button"
+            className="tool-btn"
+            onClick={onOpenWeb}
+            title="This page’s web"
+            aria-label="This page’s web"
+          >
+            <Icon name="graph" size={15} />
+          </button>
+        )}
         <button
           type="button"
           className={`tool-btn${note.pinned ? ' is-active' : ''}`}

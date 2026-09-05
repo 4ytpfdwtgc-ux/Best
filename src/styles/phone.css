@@ -94,6 +94,16 @@ body {
 
 @media (max-width: 700px) {
   /*
+   * The web's toolbar has to fit on one line: a second row of chrome eats the
+   * canvas the web is drawn on. The heading goes, since a back arrow and a
+   * count of pages say where you are just as well.
+   */
+  .graph .toolbar { flex-wrap: nowrap; }
+  .graph__title { font-size: 0; gap: 0; }
+  .graph__count { font-size: 12px; }
+  .search-field--sm { max-width: 120px; }
+
+  /*
    * A panel stands in for the keyboard rather than perching above it, so it
    * runs to both edges the way the keyboard does and squares off where the
    * two meet. The bar keeps its own corners: it is what stays behind.
