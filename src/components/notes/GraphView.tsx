@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Note, TintName } from '../../types'
+import type { Note } from '../../types'
 import { useApp } from '../../state/store'
 import {
   ALPHA_DECAY, ALPHA_MIN, ALPHA_START, DEFAULT_FORCES, buildGraph, graphBounds, neighbourhood,
@@ -11,38 +11,48 @@ import { ToolButton } from '../ui/primitives'
 
 interface Palette {
   ink: string
-  /** Lines between pages. Not the hairline the app rules its panels with: on
-   *  white that is very nearly white, and the web looked like dots and air. */
+  /** The ring around an unwritten page, and nothing else now that lines carry
+   *  the colour of the page they leave. */
   edge: string
+  /** What the web is drawn on, which is also what every dot is ringed in. */
   paper: string
-  accent: string
   font: string
-  tint: (name: TintName) => string
 }
 
-/** Every colour the web is drawn in, read from the stylesheet in one go. */
+/** The colours the web takes from the app, read from the stylesheet in one go. */
 function readPalette(): Palette {
   const styles = getComputedStyle(document.documentElement)
   const read = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
-  const tints = new Map<string, string>()
   return {
     ink: read('--text', '#37352f'),
     edge: read('--text-tertiary', '#9b9a97'),
     paper: read('--bg-window', '#ffffff'),
-    accent: read('--accent', '#2383e2'),
     font: read('--font', 'system-ui'),
-    tint: (name) => {
-      const known = tints.get(name)
-      if (known) return known
-      const value = read(`--tint-${name}`, '#888')
-      tints.set(name, value)
-      return value
-    },
   }
 }
 
-/** Nodes are coloured by the folder they live in, cycling the tint palette. */
-const FOLDER_TINTS: TintName[] = ['blue', 'purple', 'green', 'orange', 'pink', 'teal', 'red', 'indigo']
+/**
+ * Pages glow: a folder's colour, cycled from this list.
+ *
+ * Not the app's tints, which are muted on purpose so a page of writing is
+ * calm. The web is a picture rather than a page, and a picture of a hundred
+ * dots wants colours that separate at a glance. These are saturated to the
+ * edge of what stays legible on white -- a true neon like #39ff14 vanishes on
+ * it -- and they light up properly against the dark.
+ */
+const NEON = [
+  '#00b3ff', // cyan
+  '#ff2d95', // magenta
+  '#00c853', // green
+  '#ff6d00', // orange
+  '#8b5cff', // violet
+  '#00d2c3', // turquoise
+  '#ff3860', // red
+  '#ffb300', // amber
+]
+
+/** The unwritten ones have no folder to take a colour from. */
+const GHOST_INK = '#9b9a97'
 
 interface Camera {
   x: number
@@ -122,13 +132,20 @@ export function GraphView({
    */
   useEffect(() => kickRef.current(), [labels])
 
-  const folderTint = useCallback(
+  /* Looked up rather than searched: this is asked once per node and once per
+   * link, every frame. */
+  const folderInk = useMemo(() => {
+    const colours = new Map<string, string>()
+    state.folders.forEach((folder, at) => colours.set(folder.id, NEON[at % NEON.length]))
+    return colours
+  }, [state.folders])
+
+  const folderColour = useCallback(
     (node: GraphNode) => {
-      if (node.ghost) return 'gray' as TintName
-      const at = state.folders.findIndex((f) => f.id === node.folderId)
-      return FOLDER_TINTS[(at < 0 ? 0 : at) % FOLDER_TINTS.length]
+      if (node.ghost) return GHOST_INK
+      return (node.folderId && folderInk.get(node.folderId)) || NEON[0]
     },
-    [state.folders],
+    [folderInk],
   )
 
   /** Put the whole web on screen, whatever size it has settled to. */
@@ -231,35 +248,58 @@ export function GraphView({
         }
       }
 
+      /*
+       * Every line is solid. A link that nests one page inside another used to
+       * be dashed, which at any distance is a dotted smear rather than a line;
+       * it is thinner and fainter instead, which reads at every zoom.
+       *
+       * A line takes the colour of the page it leaves, so a hub's links carry
+       * its colour outwards and the picture has structure in it before a
+       * single name is read.
+       */
       for (const link of links) {
         const a = index.get(link.source)
         const b = index.get(link.target)
         if (!a || !b) continue
         const involved = !near || (lit.has(a.id) && lit.has(b.id))
-        context.strokeStyle = near && involved ? paint.accent : paint.edge
-        context.globalAlpha = near ? (involved ? 1 : 0.1) : link.nested ? 0.5 : 0.9
-        context.lineWidth = (near && involved ? 2 : link.nested ? 1 : 1.3) * scale
-        if (link.nested) context.setLineDash([4 * scale, 4 * scale])
+        context.strokeStyle = folderColour(a)
+        context.globalAlpha = near ? (involved ? 1 : 0.07) : link.nested ? 0.38 : 0.7
+        context.lineWidth = (near && involved ? 2.4 : link.nested ? 1.1 : 1.5) * scale
         context.beginPath()
         context.moveTo(a.x, a.y)
         context.lineTo(b.x, b.y)
         context.stroke()
-        if (link.nested) context.setLineDash([])
       }
 
       context.textAlign = 'center'
       context.textBaseline = 'top'
       for (const node of nodes) {
         const radius = nodeRadius(node)
-        context.globalAlpha = near ? (lit.has(node.id) ? 1 : 0.2) : 1
+        const colour = folderColour(node)
+        const alpha = near ? (lit.has(node.id) ? 1 : 0.2) : 1
+
+        /*
+         * The glow: a wider, fainter circle of the same colour under the dot.
+         * A canvas shadow would blur it properly, but that is a blur per node
+         * per frame, and this is two arcs -- indistinguishable at this size
+         * and a fraction of the cost.
+         */
+        if (!node.ghost) {
+          context.globalAlpha = alpha * 0.22
+          context.fillStyle = colour
+          context.beginPath()
+          context.arc(node.x, node.y, radius * 1.9, 0, Math.PI * 2)
+          context.fill()
+        }
+
+        context.globalAlpha = alpha
         context.beginPath()
         context.arc(node.x, node.y, radius, 0, Math.PI * 2)
         /*
-         * A ring of the page's own colour behind every dot. Two dots that
-         * overlap read as two, and a dot sitting on a line is not cut in half
-         * by it.
+         * Then the dot, ringed in the background. Two that overlap read as
+         * two, and one sitting on a line is not cut in half by it.
          */
-        context.fillStyle = node.ghost ? paint.paper : paint.tint(folderTint(node))
+        context.fillStyle = node.ghost ? paint.paper : colour
         context.fill()
         context.strokeStyle = node.ghost ? paint.edge : paint.paper
         context.lineWidth = (node.ghost ? 2 : 1.5) * scale
@@ -346,7 +386,7 @@ export function GraphView({
       observer.disconnect()
       themes.disconnect()
     }
-  }, [folderTint, fit])
+  }, [folderColour, fit])
 
   /**
    * Something moved: settle again, and draw.
