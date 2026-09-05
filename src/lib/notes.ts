@@ -115,3 +115,23 @@ export function canDropPage(notes: Note[], dragId: ID, into: ID | undefined): bo
   if (!notes.some((n) => n.id === into)) return false
   return !noteWithDescendants(notes, dragId).includes(into)
 }
+
+/**
+ * The ids of `parent`'s children, in the order they should be after `dragId`
+ * is placed before `beforeId` — or last, when `beforeId` is undefined.
+ *
+ * Kept pure so the awkward parts can be reasoned about on their own: a page
+ * moving within its own level, a page arriving from another, and the drop
+ * that changes nothing.
+ */
+export function reorderedSiblings(
+  siblings: Note[],
+  dragId: ID,
+  beforeId: ID | undefined,
+): ID[] {
+  const ids = siblings.map((n) => n.id).filter((id) => id !== dragId)
+  if (!beforeId || beforeId === dragId) return [...ids, dragId]
+  const at = ids.indexOf(beforeId)
+  if (at === -1) return [...ids, dragId]
+  return [...ids.slice(0, at), dragId, ...ids.slice(at)]
+}

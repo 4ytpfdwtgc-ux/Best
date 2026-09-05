@@ -7,8 +7,8 @@ import {
 } from '../../lib/gestures'
 import {
   addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, moveNoteToFolder,
-  noteTitle, reparentNote, setPrefs, setSelectedFolder, setSelectedNote, trashNote, unarchiveNote,
-  updateFolder,
+  noteTitle, reorderNote, reparentNote, setPrefs, setSelectedFolder, setSelectedNote, trashNote,
+  unarchiveNote, updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
@@ -41,6 +41,8 @@ export function NotesApp({
    * self-expanding behaviour this avoids.
    */
   const searching = query.trim().length > 0
+  /* Reordering is only offered under the Manual sort; see the drag handler. */
+  const manualSort = state.prefs.notesSort === 'manual' && !searching
   const rows = useMemo(
     () =>
       searching
@@ -54,13 +56,22 @@ export function NotesApp({
 
   /*
    * Dragging a page onto another nests it inside; onto a folder, or onto the
-   * list's own heading, moves it out to that folder's top level. There is no
-   * reordering between siblings: the list is sorted by whatever the sort
-   * control says, and a manual order underneath a sort nobody asked for would
-   * only ever disagree with it.
+   * list's own heading, moves it out to that folder's top level.
+   *
+   * Under the Manual sort a row's top and bottom thirds insert above or below
+   * it instead, which is the only sort where that means anything: a hand-placed
+   * order beneath Edited or Title would be overruled the moment it was set.
    */
-  const [pageDrag, setPageDrag] = useState<{ id: string; over: string | null } | null>(null)
-  const pageDragRef = useRef<{ id: string; over: string | null } | null>(null)
+  type PageDrag = {
+    id: string
+    over: string | null
+    /** Set when the pointer is on a row's edge: insert above or below it. */
+    edge: 'above' | 'below' | null
+  }
+  const [pageDrag, setPageDrag] = useState<PageDrag | null>(null)
+  const pageDragRef = useRef<PageDrag | null>(null)
+  /* The drop handler needs the rows as drawn, not as they were when it began. */
+  const rowsRef = useRef<typeof rows>([])
   const draggedRef = useRef(false)
 
   function startPageDrag(e: React.PointerEvent, id: string) {
@@ -84,7 +95,7 @@ export function NotesApp({
        * folder on the left also being read as a swipe left — which deleted it.
        */
       releaseOtherGestures()
-      pageDragRef.current = { id, over: null }
+      pageDragRef.current = { id, over: null, edge: null }
       setPageDrag(pageDragRef.current)
     }
 
@@ -109,11 +120,27 @@ export function NotesApp({
         .find((n): n is HTMLElement => n instanceof HTMLElement && n.dataset.drop !== undefined)
       const over = el?.dataset.drop ?? null
       const page = over?.startsWith('page:') ? over.slice(5) : undefined
-      // Only light up somewhere the page could actually go.
+
+      /*
+       * Under the Manual sort a row has three zones: its edges insert above or
+       * below, its middle nests inside. Under any other sort only nesting is
+       * offered — a hand-placed order beneath a sort nobody switched off would
+       * be overruled the moment it was set.
+       */
+      let edge: 'above' | 'below' | null = null
+      if (manualSort && el && page && page !== id) {
+        const rect = el.getBoundingClientRect()
+        const third = rect.height / 3
+        if (ev.clientY < rect.top + third) edge = 'above'
+        else if (ev.clientY > rect.bottom - third) edge = 'below'
+      }
+
       const allowed =
         over === null ||
-        (over.startsWith('folder:') ? true : canDropPage(state.notes, id, page))
-      pageDragRef.current = { id, over: allowed ? over : null }
+        over.startsWith('folder:') ||
+        // An edge drop lands beside the row, so nesting into it is not the test.
+        (edge ? page !== id : canDropPage(state.notes, id, page))
+      pageDragRef.current = { id, over: allowed ? over : null, edge: allowed ? edge : null }
       setPageDrag(pageDragRef.current)
     }
 
@@ -122,9 +149,25 @@ export function NotesApp({
       cleanup()
       window.setTimeout(() => void (draggedRef.current = false), 0)
       if (!current?.over) return
-      if (current.over.startsWith('folder:')) moveNoteToFolder(current.id, current.over.slice(7))
-      else if (current.over.startsWith('page:')) reparentNote(current.id, current.over.slice(5))
-      else if (current.over === 'root') reparentNote(current.id, undefined)
+      if (current.over.startsWith('folder:')) return moveNoteToFolder(current.id, current.over.slice(7))
+      if (current.over === 'root') return reparentNote(current.id, undefined)
+      if (!current.over.startsWith('page:')) return
+
+      const targetId = current.over.slice(5)
+      if (!current.edge) return reparentNote(current.id, targetId)
+
+      // Beside the row: the same level as it, above or below.
+      const target = state.notes.find((n) => n.id === targetId)
+      if (!target) return
+      const level = target.parentId ?? undefined
+      const siblingIds = rowsRef.current
+        .filter((r) => (r.note.parentId ?? undefined) === level)
+        .map((r) => r.note.id)
+      // The dragged page is about to be re-placed, so it is not its own anchor.
+      const rest = siblingIds.filter((sid) => sid !== current.id)
+      const at = rest.indexOf(targetId)
+      const beforeId = current.edge === 'above' ? targetId : rest[at + 1]
+      reorderNote(current.id, level, beforeId, siblingIds)
     }
 
     const cleanup = () => {
@@ -142,6 +185,8 @@ export function NotesApp({
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', cleanup)
   }
+
+  rowsRef.current = rows
 
   // Keep a valid selection as the filtered list changes. On a phone the editor
   // is a pushed screen, so nothing is auto-selected — that would skip the list.
@@ -305,12 +350,15 @@ export function NotesApp({
           <select
             className="select input--sm notes-list__sort"
             value={state.prefs.notesSort}
-            onChange={(e) => setPrefs({ notesSort: e.target.value as 'edited' | 'created' | 'title' })}
+            onChange={(e) =>
+              setPrefs({ notesSort: e.target.value as 'edited' | 'created' | 'title' | 'manual' })
+            }
             aria-label="Sort notes"
           >
             <option value="edited">Edited</option>
             <option value="created">Created</option>
             <option value="title">Title</option>
+            <option value="manual">Manual</option>
           </select>
           {state.selectedFolderId === 'trash' ? (
             <ToolButton icon="trash" label="Empty trash" onClick={() => trashCount && emptyTrash()} />
@@ -333,6 +381,9 @@ export function NotesApp({
           )}
           {rows.map(({ note, depth, hasChildren }) => (
             <li key={note.id}>
+              {pageDrag?.over === `page:${note.id}` && pageDrag.edge === 'above' && (
+                <div className="note-row__dropline" style={{ marginLeft: depth * 14 }} />
+              )}
               <SwipeRow
                 // Recently Deleted holds only an irreversible action, which is
                 // not something a swipe should be able to reach.
@@ -346,7 +397,9 @@ export function NotesApp({
               >
               <div
                 className={`note-row${pageDrag?.id === note.id ? ' is-dragging' : ''}${
-                  pageDrag && pageDrag.over === `page:${note.id}` ? ' is-droptarget' : ''
+                  pageDrag && pageDrag.over === `page:${note.id}` && !pageDrag.edge
+                    ? ' is-droptarget'
+                    : ''
                 }`}
                 style={{ paddingLeft: depth * 14 }}
                 data-drop={`page:${note.id}`}
@@ -419,6 +472,9 @@ export function NotesApp({
                 )}
               </div>
               </SwipeRow>
+              {pageDrag?.over === `page:${note.id}` && pageDrag.edge === 'below' && (
+                <div className="note-row__dropline" style={{ marginLeft: depth * 14 }} />
+              )}
             </li>
           ))}
         </ul>

@@ -7,7 +7,7 @@ import {
 import { decorateInline, toggleMark } from '../src/lib/inline.ts'
 import type { Block, Note, Reminder } from '../src/types.ts'
 import { noteToMarkdown, remindersToText, shareFilename } from '../src/lib/share.ts'
-import { canDropPage, noteTree } from '../src/lib/notes.ts'
+import { canDropPage, noteTree, reorderedSiblings } from '../src/lib/notes.ts'
 import {
   DRAG_SLOP, SENSITIVITY, SWIPE_COMMIT, SWIPE_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP,
 } from '../src/lib/gestures.ts'
@@ -371,4 +371,45 @@ test('a page that is not there cannot be dragged, nor dropped on', () => {
   assert.equal(canDropPage(notes, 'ghost', undefined), false)
   assert.equal(canDropPage(notes, 'a', 'ghost'), false)
   assert.equal(canDropPage(notes, '', undefined), false)
+})
+
+/* Manual ordering --------------------------------------------------- */
+
+test('a page is placed before the one it was dropped above', () => {
+  const siblings = [page('a'), page('b'), page('c')]
+  assert.deepEqual(reorderedSiblings(siblings, 'c', 'b'), ['a', 'c', 'b'])
+  assert.deepEqual(reorderedSiblings(siblings, 'a', 'c'), ['b', 'a', 'c'])
+})
+
+test('dropped past the end, it goes last', () => {
+  const siblings = [page('a'), page('b'), page('c')]
+  assert.deepEqual(reorderedSiblings(siblings, 'a', undefined), ['b', 'c', 'a'])
+})
+
+test('a page arriving from another level joins the order', () => {
+  // It is not among the siblings yet, so nothing is removed on the way in.
+  const siblings = [page('a'), page('b')]
+  assert.deepEqual(reorderedSiblings(siblings, 'newcomer', 'b'), ['a', 'newcomer', 'b'])
+  assert.deepEqual(reorderedSiblings(siblings, 'newcomer', undefined), ['a', 'b', 'newcomer'])
+})
+
+test('dropping a page on itself leaves the order alone', () => {
+  const siblings = [page('a'), page('b'), page('c')]
+  assert.deepEqual(reorderedSiblings(siblings, 'b', 'b'), ['a', 'c', 'b'])
+})
+
+test('a target that is not there puts the page last rather than losing it', () => {
+  const siblings = [page('a'), page('b')]
+  assert.deepEqual(reorderedSiblings(siblings, 'a', 'ghost'), ['b', 'a'])
+})
+
+test('the order follows the rows as drawn, across folders', () => {
+  // All Notes shows every folder together, so ordering is over what is on the
+  // screen rather than over one folder's contents.
+  const shown = [
+    { ...page('work'), folderId: 'f1' },
+    { ...page('ideas'), folderId: 'f2' },
+    { ...page('notes'), folderId: 'f3' },
+  ]
+  assert.deepEqual(reorderedSiblings(shown, 'notes', 'work'), ['notes', 'work', 'ideas'])
 })

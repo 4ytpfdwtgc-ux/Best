@@ -133,6 +133,12 @@ absolute ones would resolve to the domain root and break the installed app.
   inside, on the list heading to lift it back out, or on a folder to move it
   there. Whatever is nested under it goes too. A page cannot be dropped inside
   its own descendant, and nothing lights up where a page cannot actually go.
+- **Manual** joins Edited, Created and Title in the sort control, and is the
+  one sort where a row's top and bottom thirds insert above or below it instead
+  of nesting into it — a hand-placed order under any other sort would be
+  overruled the moment it was set. The order follows the rows as drawn rather
+  than one folder's contents, since All Notes shows every folder together.
+  Pinned pages still come first, as they do under every sort.
 - **Links in the writing**: `[text](url)` becomes a link, and `[[Page name]]`
   links to another page — creating it if it does not exist yet, since writing
   the link is usually how a page comes to exist. Each page lists the pages that

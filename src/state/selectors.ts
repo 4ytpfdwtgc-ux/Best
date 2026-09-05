@@ -247,6 +247,17 @@ export function visibleNotes(s: AppState, query = ''): Note[] {
     .filter((n) => !q || `${n.title} ${blocksToText(n.blocks)}`.toLowerCase().includes(q))
     .sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      if (s.prefs.notesSort === 'manual') {
+        /*
+         * A page that has never been dragged has no position, and sorts after
+         * those that have — rather than at the front, where a page nobody has
+         * touched would otherwise sit above one deliberately placed.
+         */
+        const ai = a.sortIndex ?? Number.MAX_SAFE_INTEGER
+        const bi = b.sortIndex ?? Number.MAX_SAFE_INTEGER
+        if (ai !== bi) return ai - bi
+        return a.updatedAt < b.updatedAt ? 1 : -1
+      }
       if (s.prefs.notesSort === 'title') return noteTitle(a).localeCompare(noteTitle(b))
       const key = s.prefs.notesSort === 'created' ? 'createdAt' : 'updatedAt'
       return a[key] < b[key] ? 1 : -1

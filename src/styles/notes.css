@@ -12,10 +12,20 @@
 .toolbar--tight { padding: 0 8px; gap: 6px; }
 .notes-list__sort { width: auto; padding: 3px 20px 3px 6px; font-size: 13px; }
 .notes-list__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   padding: 8px 14px 4px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
+  /*
+   * Never grows. The hint appears here the moment a drag starts, and a heading
+   * that wrapped to a second line would push every row down by its own height
+   * — moving the drop targets out from under the finger that is aiming at them.
+   */
+  white-space: nowrap;
+  overflow: hidden;
 }
 .notes-list__items { list-style: none; margin: 0; padding: 0 6px 12px; flex: 1; }
 .notes-list__empty { padding: 20px 8px; color: var(--text-tertiary); text-align: center; }
@@ -461,8 +471,19 @@
   border-radius: var(--radius);
   background: var(--bg-hover);
 }
+.note-row__dropline {
+  height: 2px;
+  margin: -1px 8px;
+  border-radius: 1px;
+  background: var(--accent);
+  position: relative;
+  z-index: 2;
+}
+
 .notes-list__hint {
-  margin-left: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;

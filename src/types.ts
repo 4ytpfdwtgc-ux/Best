@@ -269,6 +269,11 @@ export interface Note {
   folderId: ID
   /** The page this one sits inside. Absent at the top level of its folder. */
   parentId?: ID
+  /**
+   * Position among its siblings, under the Manual sort. Absent on a page that
+   * has never been dragged, which sorts after those that have.
+   */
+  sortIndex?: number
   /** The page title, shown large at the top and used in lists. */
   title: string
   /** Page icon: a name from the icon set, or an emoji saved by an older build. */
@@ -309,7 +314,7 @@ export interface Preferences {
   /** Overlay reminders with due dates onto the calendar. */
   showRemindersOnCalendar: boolean
   use24HourTime: boolean
-  notesSort: 'edited' | 'created' | 'title'
+  notesSort: 'edited' | 'created' | 'title' | 'manual'
 }
 
 export interface AppState {

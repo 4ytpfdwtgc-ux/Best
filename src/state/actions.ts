@@ -4,7 +4,7 @@ import type {
   Reminder, ReminderList, ReminderSelection, Tag, TintName, CalendarViewMode,
 } from '../types'
 import { getState, setState } from './store'
-import { noteWithDescendants } from '../lib/notes'
+import { noteWithDescendants, reorderedSiblings } from '../lib/notes'
 import { lingerReminder, releaseReminder } from './linger'
 import { uid } from '../lib/id'
 import { nowISO, todayISO } from '../lib/date'
@@ -600,6 +600,59 @@ export function reparentNote(id: ID, parentId: ID | undefined) {
       if (!family.has(n.id)) return n
       const moved = folderId ? { ...n, folderId } : n
       return n.id === id ? { ...moved, parentId, updatedAt: at } : moved
+    }),
+  }))
+}
+
+/**
+ * Put a page at a particular place among its siblings, under the Manual sort.
+ *
+ * `beforeId` is the page it should land above, or undefined for the end. The
+ * whole level is renumbered rather than a gap being found between two
+ * neighbours: a list of pages is short, and numbering it outright means the
+ * order can never drift or run out of room between two adjacent values.
+ */
+export function reorderNote(
+  id: ID,
+  parentId: ID | undefined,
+  beforeId: ID | undefined,
+  /*
+   * The rows at that level as they are drawn, in order. Taken from the list
+   * rather than worked out from the store, because All Notes shows pages from
+   * every folder together: an order derived per folder would describe
+   * something other than what is on the screen, and a drop would appear to do
+   * nothing.
+   */
+  siblingIds: ID[],
+) {
+  const state = getState()
+  const dragged = state.notes.find((n) => n.id === id)
+  if (!dragged) return
+  // The same rule as nesting: a page cannot be placed inside its own branch.
+  if (parentId && noteWithDescendants(state.notes, id).includes(parentId)) return
+
+  const parent = parentId ? state.notes.find((n) => n.id === parentId) : undefined
+  if (parentId && !parent) return
+  const folderId = parent?.folderId ?? dragged.folderId
+
+  const known = new Map(state.notes.map((n) => [n.id, n]))
+  const siblings = siblingIds.map((sid) => known.get(sid)).filter((n): n is Note => !!n)
+  const order = reorderedSiblings(siblings, id, beforeId)
+  const position = new Map(order.map((noteId, i) => [noteId, i]))
+
+  // Arriving from elsewhere, the page brings its branch into this folder.
+  const family = new Set(noteWithDescendants(state.notes, id))
+  const at = nowISO()
+  setState((s) => ({
+    notes: s.notes.map((n) => {
+      const index = position.get(n.id)
+      const inFamily = family.has(n.id)
+      if (index === undefined && !inFamily) return n
+      let next = n
+      if (inFamily && n.folderId !== folderId) next = { ...next, folderId }
+      if (n.id === id) next = { ...next, parentId, updatedAt: at }
+      if (index !== undefined) next = { ...next, sortIndex: index }
+      return next
     }),
   }))
 }
