@@ -7,6 +7,7 @@ export type AttachAction =
   | 'scan'
   | 'scanText'
   | 'audio'
+  | 'sketch'
   | 'file'
   | 'table'
   | 'link'
@@ -36,6 +37,7 @@ const ITEMS: Item[] = [
   { action: 'scan', label: 'Scan Documents', icon: 'clipboard', hint: 'A page at a time', handheld: true },
   { action: 'scanText', label: 'Scan Text', icon: 'text', hint: "Touch and hold, then 'Scan Text'", handheld: true },
   { action: 'photos', label: 'Photo Library', icon: 'image' },
+  { action: 'sketch', label: 'Add Sketch', icon: 'text', hint: 'Finger or Apple Pencil' },
   { action: 'audio', label: 'Record Audio', icon: 'music' },
   { action: 'file', label: 'Attach File', icon: 'download' },
   { action: 'table', label: 'Add Table', icon: 'grid' },

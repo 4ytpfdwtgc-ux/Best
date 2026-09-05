@@ -17,6 +17,7 @@ export function emptyBlock(type: BlockType = 'text', indent = 0): Block {
       ['', '', ''],
     ]
   }
+  if (type === 'sketch') block.strokes = []
   if (type === 'callout') {
     block.tint = 'gray'
     block.icon = '💡'
@@ -48,6 +49,7 @@ export const BLOCK_MENU: {
   { type: 'link', label: 'Link', hint: 'Save a web address as a card.', keywords: ['link', 'url', 'web', 'bookmark', 'address', 'site'], glyph: '↗' },
   { type: 'file', label: 'File', hint: 'Attach a PDF, a document, anything.', keywords: ['file', 'attach', 'attachment', 'pdf', 'document', 'upload'], glyph: '⇩' },
   { type: 'audio', label: 'Audio', hint: 'Record a voice memo on the page.', keywords: ['audio', 'record', 'voice', 'memo', 'sound', 'mic', 'dictate'], glyph: '◉' },
+  { type: 'sketch', label: 'Sketch', hint: 'Draw with a finger or a pencil.', keywords: ['sketch', 'draw', 'drawing', 'pencil', 'markup', 'handwriting', 'sign'], glyph: '✎' },
   { type: 'table', label: 'Table', hint: 'Rows and columns of plain text.', keywords: ['table', 'grid', 'rows', 'columns', 'spreadsheet'], glyph: '⊞' },
 ]
 
@@ -141,6 +143,7 @@ export function blocksToMarkdown(blocks: Block[]): string {
         case 'image': return `${pad}![${b.text}](picture)`
         case 'link': return `${pad}[${b.text}](${b.url ?? ''})`
         case 'file': return `${pad}[${b.text || 'Attachment'}](file)`
+        case 'sketch': return `${pad}![${b.text || 'Sketch'}](sketch)`
         case 'audio': return `${pad}[${b.text || 'Voice memo'}${b.duration ? ` (${clock(b.duration)})` : ''}](audio)`
         case 'table': return tableToMarkdown(b, pad)
         case 'code': return `${pad}\`\`\`\n${b.text}\n${pad}\`\`\``

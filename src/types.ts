@@ -229,7 +229,37 @@ export type BlockType =
   | 'link'
   | 'file'
   | 'audio'
+  | 'sketch'
   | 'table'
+
+/**
+ * One line of a drawing.
+ *
+ * Points are flat x,y pairs in the sketch's own 1000x600 space, so a drawing
+ * made on a phone is the same drawing on a laptop. Strokes are kept rather
+ * than a picture: they stay sharp at any size, they follow the theme, and the
+ * drawing can be picked up and added to later.
+ */
+export interface Stroke {
+  points: number[]
+  /** A tint name, or `ink` for whatever the page's text colour is. */
+  color: TintName | 'ink'
+  width: number
+}
+
+/**
+ * The space a sketch is drawn in.
+ *
+ * The width is fixed so a drawing means the same thing everywhere. The height
+ * is taken from the surface it was drawn on, within these bounds -- a phone
+ * held upright would otherwise draw into a letterbox with two thirds of the
+ * screen unused, and an unbounded portrait sketch would swallow the page it
+ * sits in.
+ */
+export const SKETCH_WIDTH = 1000
+export const SKETCH_HEIGHT = 600
+export const SKETCH_MIN_HEIGHT = 400
+export const SKETCH_MAX_HEIGHT = 1000
 
 /**
  * A block of note content. Blocks are stored flat with an `indent` level
@@ -263,6 +293,9 @@ export interface Block {
   url?: string
   /** `audio` only: how long the recording runs, in seconds. */
   duration?: number
+  /** `sketch` only: the drawing itself, and the shape it was drawn at. */
+  strokes?: Stroke[]
+  sketchHeight?: number
   /** `table` only: rows of cells, the first being the header. `text` is a caption. */
   rows?: string[][]
   /**

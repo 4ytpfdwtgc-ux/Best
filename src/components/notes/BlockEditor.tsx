@@ -9,6 +9,7 @@ import {
 } from '../../lib/caret'
 import { AssetError, putFile, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
+import { isBlank } from '../../lib/sketch'
 import { DRAG_SLOP, suppressSelection } from '../../lib/gestures'
 import { hasMark, MARKERS, toggleMark, type MarkName } from '../../lib/inline'
 import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
@@ -18,6 +19,7 @@ import { IconPicker } from '../ui/IconPicker'
 import { BlockRow } from './BlockRow'
 import { FormatBar } from './FormatBar'
 import type { AttachAction } from './AttachMenu'
+import { SketchPad } from './SketchPad'
 import { SlashMenu } from './SlashMenu'
 import { BlockMenu } from './BlockMenu'
 
@@ -111,6 +113,8 @@ export function BlockEditor({ note }: { note: Note }) {
   const [barId, setBarId] = useState<string | null>(null)
   /** The block the attach menu just made, so its recorder starts by itself. */
   const [recordingId, setRecordingId] = useState<string | null>(null)
+  /** The sketch being drawn on, if any. */
+  const [sketchId, setSketchId] = useState<string | null>(null)
   /** Shown after Scan Text, which is a thing iOS does and the page cannot. */
   const [hint, setHint] = useState<string | null>(null)
   const pickerRef = useRef<HTMLInputElement>(null)
@@ -259,6 +263,11 @@ export function BlockEditor({ note }: { note: Note }) {
       case 'audio': {
         const fresh = appendBlock('audio')
         setRecordingId(fresh.id)
+        return
+      }
+      case 'sketch': {
+        const fresh = appendBlock('sketch')
+        setSketchId(fresh.id)
         return
       }
       case 'file':
@@ -699,6 +708,7 @@ export function BlockEditor({ note }: { note: Note }) {
   }
 
   const visible = note.blocks.filter((b) => !hidden.has(b.id))
+  const sketchBlock = note.blocks.find((b) => b.id === sketchId) ?? null
   const menuBlock = menu ? note.blocks.find((b) => b.id === menu.blockId) : null
 
   return (
@@ -776,6 +786,7 @@ export function BlockEditor({ note }: { note: Note }) {
                 onPasteImages={(files) => pasteFiles(block, files)}
                 recordNow={recordingId === block.id}
                 onRecorded={(file, seconds) => void saveRecording(block, file, seconds)}
+                onEditSketch={() => setSketchId(block.id)}
                 onPasteURL={(pasted) => pasteURL(block, pasted)}
                 onSetURL={(url) => setLinkURL(block, url)}
                 onSetRows={(rows) => patchBlock(block.id, { rows })}
@@ -822,6 +833,22 @@ export function BlockEditor({ note }: { note: Note }) {
       )}
 
       {hint && <p className="page__hint" role="status">{hint}</p>}
+
+      {sketchBlock && (
+        <SketchPad
+          strokes={sketchBlock.strokes ?? []}
+          height={sketchBlock.sketchHeight}
+          onDone={(strokes, sketchHeight) => {
+            patchBlock(sketchBlock.id, { strokes, sketchHeight })
+            setSketchId(null)
+          }}
+          onCancel={() => {
+            // A drawing nobody started is a block nobody asked for.
+            if (isBlank(sketchBlock.strokes)) commit(blocksRef.current.filter((b) => b.id !== sketchBlock.id))
+            setSketchId(null)
+          }}
+        />
+      )}
 
       <input
         ref={pickerRef}

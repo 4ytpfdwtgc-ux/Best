@@ -7,6 +7,7 @@ import { ImageBlock } from './ImageBlock'
 import { LinkBlock } from './LinkBlock'
 import { FileBlock } from './FileBlock'
 import { AudioBlock } from './AudioBlock'
+import { SketchBlock } from './SketchBlock'
 import { TableBlock } from './TableBlock'
 
 /**
@@ -33,6 +34,7 @@ export function BlockRow({
   onPasteImages,
   recordNow,
   onRecorded,
+  onEditSketch,
   onPasteURL,
   onSetURL,
   onSetRows,
@@ -62,6 +64,8 @@ export function BlockRow({
   /** `audio` only: this block was just made by the attach menu, so start recording. */
   recordNow?: boolean
   onRecorded: (file: File, seconds: number) => void
+  /** `sketch` only: open the drawing surface on this block. */
+  onEditSketch: () => void
   /** A pasted address, when the block was empty. Returns false to paste as text. */
   onPasteURL: (url: string) => boolean
   /** `link` only. */
@@ -244,6 +248,8 @@ export function BlockRow({
           />
         )}
 
+        {block.type === 'sketch' && <SketchBlock block={block} onEdit={onEditSketch} />}
+
         {block.type === 'image' && (
           <ImageBlock
             block={block}
@@ -283,6 +289,7 @@ function placeholderFor(block: Block, active: boolean): string {
     case 'image': return active ? 'Write a caption…' : ''
     case 'file': return active ? 'Name this file…' : ''
     case 'audio': return active ? 'Name this recording…' : ''
+    case 'sketch': return active ? 'Caption this sketch…' : ''
     case 'table': return active ? 'Caption this table…' : ''
     case 'link': return 'Untitled link'
     default: return active ? "Type '/' for commands" : ''

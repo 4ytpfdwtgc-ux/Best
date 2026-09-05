@@ -1019,7 +1019,7 @@
   padding: 6px 10px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--bg-window);
   color: var(--text);
   font-size: 13px;
   cursor: pointer;
@@ -1040,7 +1040,7 @@
   height: 30px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--bg-window);
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
@@ -1060,7 +1060,7 @@
 }
 .fmt__swatch--filled { background: var(--tint-bg); }
 .fmt__swatch--none {
-  background: var(--bg);
+  background: var(--bg-window);
   color: var(--text-tertiary);
   font-size: 13px;
   line-height: 1;
@@ -1143,7 +1143,7 @@
   padding: 8px 12px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--bg-window);
 }
 .audio__icon { flex: none; color: var(--text-tertiary); display: grid; place-items: center; }
 .audio__player { flex: 1; min-width: 0; height: 34px; }
@@ -1183,3 +1183,120 @@
   50% { opacity: 0.25; }
 }
 .audio__error { font-size: 12px; color: var(--tint-red); }
+
+/* Sketches ---------------------------------------------------------- */
+
+/* The caption sits under the drawing, as a picture's does. */
+.blk--sketch .blk__body { flex-direction: column; gap: 4px; }
+.blk--sketch .blk__text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  width: 100%;
+}
+
+.sketch { width: 100%; }
+.sketch__frame {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-window);
+  overflow: hidden;
+  cursor: pointer;
+}
+.sketch__frame:hover { border-color: var(--line-strong, var(--text-tertiary)); }
+.sketch__svg { display: block; width: 100%; height: auto; }
+.sketch__empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 18px;
+  justify-content: center;
+  border: 1px dashed var(--line-strong, var(--line));
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.sketch__empty:hover { background: var(--bg-hover); color: var(--text-secondary); }
+
+/* One rule for the lines, whether they are being drawn or read. */
+.sketch__line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sketch__line--ink { stroke: var(--text); }
+.sketch__line--blue { stroke: var(--tint-blue); }
+.sketch__line--red { stroke: var(--tint-red); }
+.sketch__line--green { stroke: var(--tint-green); }
+.sketch__line--yellow { stroke: var(--tint-yellow); }
+
+.sketch-pad {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-window);
+}
+/*
+ * Two rows on purpose: what the drawing is for on top, what it is drawn with
+ * underneath. One row would need a phone twice as wide, or would scroll Done
+ * off the end of itself.
+ */
+.sketch-pad__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.sketch-pad__actions { display: flex; align-items: center; gap: 8px; }
+.sketch-pad__spacer { flex: 1; }
+.sketch-pad__tools { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sketch-pad__sep { width: 1px; height: 18px; margin: 0 4px; background: var(--line); }
+.sketch-pad__ink {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+.sketch-pad__ink.is-on { border-color: var(--accent); }
+.sketch-pad__ink--ink { background: var(--text); }
+.sketch-pad__ink--blue { background: var(--tint-blue); }
+.sketch-pad__ink--red { background: var(--tint-red); }
+.sketch-pad__ink--green { background: var(--tint-green); }
+.sketch-pad__ink--yellow { background: var(--tint-yellow); }
+.sketch-pad__nib {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.sketch-pad__nib span { display: block; border-radius: 50%; background: var(--text-secondary); }
+.sketch-pad__nib.is-on { background: var(--bg-hover); }
+
+.sketch-pad__surface {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.sketch-pad__svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  /* The surface owns every gesture: nothing here scrolls or zooms. */
+  touch-action: none;
+  cursor: crosshair;
+}
+.sketch-pad__paper { fill: var(--bg-window); stroke: var(--line); stroke-width: 1; }
