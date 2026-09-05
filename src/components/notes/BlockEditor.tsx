@@ -17,6 +17,7 @@ import { Icon, isIconName } from '../ui/Icon'
 import { IconPicker } from '../ui/IconPicker'
 import { BlockRow } from './BlockRow'
 import { FormatBar } from './FormatBar'
+import type { AttachAction } from './AttachMenu'
 import { SlashMenu } from './SlashMenu'
 import { BlockMenu } from './BlockMenu'
 
@@ -108,6 +109,12 @@ export function BlockEditor({ note }: { note: Note }) {
    * focus lands somewhere else entirely, or on Escape.
    */
   const [barId, setBarId] = useState<string | null>(null)
+  /** The block the attach menu just made, so its recorder starts by itself. */
+  const [recordingId, setRecordingId] = useState<string | null>(null)
+  /** Shown after Scan Text, which is a thing iOS does and the page cannot. */
+  const [hint, setHint] = useState<string | null>(null)
+  const pickerRef = useRef<HTMLInputElement>(null)
+  const pickModeRef = useRef<'auto' | 'image' | 'file'>('auto')
   const barBlock = note.blocks.find((b) => b.id === barId) ?? null
 
   useEffect(() => setBarId(null), [note.id])
@@ -189,6 +196,102 @@ export function BlockEditor({ note }: { note: Note }) {
       patchBlock(barBlock.id, { indent: barBlock.indent + 1 })
     }
     focusBlock(barBlock.id, range?.end ?? 'end')
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Attaching                                                         */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * One file input, reconfigured per action.
+   *
+   * `capture` is what turns a picker into the camera on a phone, and it has to
+   * be absent rather than false for the library to be offered at all -- so the
+   * attributes are set on the element instead of rendered.
+   */
+  function pick(accept: string, mode: 'auto' | 'image' | 'file', opts: { camera?: boolean; multiple?: boolean } = {}) {
+    const el = pickerRef.current
+    if (!el) return
+    el.accept = accept
+    el.multiple = opts.multiple ?? true
+    if (opts.camera) el.setAttribute('capture', 'environment')
+    else el.removeAttribute('capture')
+    pickModeRef.current = mode
+    // Cleared, or choosing the same photo twice in a row fires nothing.
+    el.value = ''
+    el.click()
+  }
+
+  /** Put a fresh block after the one being edited, and hand it back. */
+  function appendBlock(type: BlockType = 'text'): Block {
+    const blocks = blocksRef.current
+    const anchor = blocks.find((b) => b.id === barId) ?? blocks[blocks.length - 1]
+    const fresh = emptyBlock(type, anchor?.indent ?? 0)
+    const next = [...blocks]
+    next.splice(anchor ? next.findIndex((b) => b.id === anchor.id) + 1 : next.length, 0, fresh)
+    commit(next)
+    return fresh
+  }
+
+  function runAttach(action: AttachAction) {
+    setHint(null)
+    switch (action) {
+      case 'photos':
+        return pick('image/*', 'image')
+      case 'camera':
+        return pick('image/*', 'image', { camera: true, multiple: false })
+      case 'scan':
+        // iOS keeps its own document scanner to itself, so this is the camera,
+        // one page at a time, with the shrink and the storage already in place.
+        return pick('image/*', 'image', { camera: true })
+      case 'scanText': {
+        /*
+         * There is no OCR in a browser worth shipping. iOS has an excellent
+         * one built into every text field, so the page makes somewhere for the
+         * words to land and says how to fetch them.
+         */
+        const fresh = appendBlock('text')
+        focusBlock(fresh.id)
+        setHint("Touch and hold in the new line, then choose Scan Text.")
+        window.setTimeout(() => setHint(null), 9000)
+        return
+      }
+      case 'audio': {
+        const fresh = appendBlock('audio')
+        setRecordingId(fresh.id)
+        return
+      }
+      case 'file':
+        return pick('*/*', 'file')
+      case 'table':
+      case 'link': {
+        const fresh = appendBlock(action)
+        focusBlock(fresh.id)
+        return
+      }
+    }
+  }
+
+  /** A finished recording is stored exactly as a file attachment is. */
+  async function saveRecording(block: Block, file: File, seconds: number) {
+    setRecordingId(null)
+    setBusy(block.id, true)
+    clearImageError(block.id)
+    try {
+      const stored = await putFile(file)
+      patchBlock(block.id, {
+        assetId: stored.id,
+        duration: Math.round(seconds),
+        text: block.text || (stored.name ?? file.name).replace(/\.[a-z0-9]+$/i, ''),
+      })
+    } catch (error) {
+      setImageErrors((c) => ({
+        ...c,
+        [block.id]: error instanceof AssetError ? error.message : 'That recording could not be saved.',
+      }))
+    } finally {
+      setBusy(block.id, false)
+    }
   }
 
   /* ---------------------------------------------------------------- */
@@ -505,15 +608,15 @@ export function BlockEditor({ note }: { note: Note }) {
   }
 
   /** Files pasted or dropped on a block: they go after it, not over its text. */
-  function pasteFiles(block: Block, files: File[]) {
+  function pasteFiles(block: Block, files: File[], mode: 'auto' | 'image' | 'file' = 'auto') {
     // An empty block has nothing worth keeping, so the first file lands in it.
-    if (!block.text && block.type === 'text') return void addAttachments(block, files, 'auto')
+    if (!block.text && block.type === 'text') return void addAttachments(block, files, mode)
     // A plain block to start from; each file then decides what it becomes.
     const fresh = emptyBlock('text', block.indent)
     const next = [...blocksRef.current]
     next.splice(next.findIndex((b) => b.id === block.id) + 1, 0, fresh)
     commit(next)
-    void addAttachments(fresh, files, 'auto')
+    void addAttachments(fresh, files, mode)
   }
 
   /* ---------------------------------------------------------------- */
@@ -671,6 +774,8 @@ export function BlockEditor({ note }: { note: Note }) {
                 }
                 onClearImageError={() => clearImageError(block.id)}
                 onPasteImages={(files) => pasteFiles(block, files)}
+                recordNow={recordingId === block.id}
+                onRecorded={(file, seconds) => void saveRecording(block, file, seconds)}
                 onPasteURL={(pasted) => pasteURL(block, pasted)}
                 onSetURL={(url) => setLinkURL(block, url)}
                 onSetRows={(rows) => patchBlock(block.id, { rows })}
@@ -712,8 +817,27 @@ export function BlockEditor({ note }: { note: Note }) {
           onBackground={(tint) => patchBlock(barBlock.id, { tint })}
           onFont={(font: NoteFont) => updateNote(note.id, { font })}
           onScale={(fontScale) => updateNote(note.id, { fontScale })}
+          onAttach={runAttach}
         />
       )}
+
+      {hint && <p className="page__hint" role="status">{hint}</p>}
+
+      <input
+        ref={pickerRef}
+        type="file"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => {
+          const files = [...(e.target.files ?? [])]
+          e.target.value = ''
+          if (!files.length) return
+          const blocks = blocksRef.current
+          const anchor = blocks.find((b) => b.id === barId) ?? blocks[blocks.length - 1]
+          if (anchor) pasteFiles(anchor, files, pickModeRef.current)
+        }}
+      />
 
       <Backlinks note={note} />
 

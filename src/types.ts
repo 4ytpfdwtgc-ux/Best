@@ -228,6 +228,7 @@ export type BlockType =
   | 'image'
   | 'link'
   | 'file'
+  | 'audio'
   | 'table'
 
 /**
@@ -260,6 +261,8 @@ export interface Block {
   imageHeight?: number
   /** `link` only: the destination. `text` is the card's title. */
   url?: string
+  /** `audio` only: how long the recording runs, in seconds. */
+  duration?: number
   /** `table` only: rows of cells, the first being the header. `text` is a caption. */
   rows?: string[][]
   /**

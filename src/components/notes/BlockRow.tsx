@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icon'
 import { ImageBlock } from './ImageBlock'
 import { LinkBlock } from './LinkBlock'
 import { FileBlock } from './FileBlock'
+import { AudioBlock } from './AudioBlock'
 import { TableBlock } from './TableBlock'
 
 /**
@@ -30,6 +31,8 @@ export function BlockRow({
   onPickImage,
   onClearImageError,
   onPasteImages,
+  recordNow,
+  onRecorded,
   onPasteURL,
   onSetURL,
   onSetRows,
@@ -56,6 +59,9 @@ export function BlockRow({
   onClearImageError: () => void
   /** Pictures pasted into this block's text. */
   onPasteImages: (files: File[]) => void
+  /** `audio` only: this block was just made by the attach menu, so start recording. */
+  recordNow?: boolean
+  onRecorded: (file: File, seconds: number) => void
   /** A pasted address, when the block was empty. Returns false to paste as text. */
   onPasteURL: (url: string) => boolean
   /** `link` only. */
@@ -227,6 +233,17 @@ export function BlockRow({
           />
         )}
 
+        {block.type === 'audio' && (
+          <AudioBlock
+            block={block}
+            autoStart={recordNow}
+            busy={imageBusy}
+            error={imageError}
+            onRecorded={onRecorded}
+            onRetry={onClearImageError}
+          />
+        )}
+
         {block.type === 'image' && (
           <ImageBlock
             block={block}
@@ -265,6 +282,7 @@ function placeholderFor(block: Block, active: boolean): string {
     case 'code': return 'Code'
     case 'image': return active ? 'Write a caption…' : ''
     case 'file': return active ? 'Name this file…' : ''
+    case 'audio': return active ? 'Name this recording…' : ''
     case 'table': return active ? 'Caption this table…' : ''
     case 'link': return 'Untitled link'
     default: return active ? "Type '/' for commands" : ''

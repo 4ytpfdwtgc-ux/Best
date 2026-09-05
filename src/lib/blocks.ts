@@ -47,6 +47,7 @@ export const BLOCK_MENU: {
   { type: 'image', label: 'Picture', hint: 'Add a photo or an image file.', keywords: ['image', 'picture', 'photo', 'img', 'camera', 'upload'], glyph: '▣' },
   { type: 'link', label: 'Link', hint: 'Save a web address as a card.', keywords: ['link', 'url', 'web', 'bookmark', 'address', 'site'], glyph: '↗' },
   { type: 'file', label: 'File', hint: 'Attach a PDF, a document, anything.', keywords: ['file', 'attach', 'attachment', 'pdf', 'document', 'upload'], glyph: '⇩' },
+  { type: 'audio', label: 'Audio', hint: 'Record a voice memo on the page.', keywords: ['audio', 'record', 'voice', 'memo', 'sound', 'mic', 'dictate'], glyph: '◉' },
   { type: 'table', label: 'Table', hint: 'Rows and columns of plain text.', keywords: ['table', 'grid', 'rows', 'columns', 'spreadsheet'], glyph: '⊞' },
 ]
 
@@ -140,6 +141,7 @@ export function blocksToMarkdown(blocks: Block[]): string {
         case 'image': return `${pad}![${b.text}](picture)`
         case 'link': return `${pad}[${b.text}](${b.url ?? ''})`
         case 'file': return `${pad}[${b.text || 'Attachment'}](file)`
+        case 'audio': return `${pad}[${b.text || 'Voice memo'}${b.duration ? ` (${clock(b.duration)})` : ''}](audio)`
         case 'table': return tableToMarkdown(b, pad)
         case 'code': return `${pad}\`\`\`\n${b.text}\n${pad}\`\`\``
         default: return `${pad}${b.text}`
@@ -192,6 +194,12 @@ export function markdownToBlocks(body: string): Block[] {
 
   if (inCode && codeLines.length) blocks.push({ ...emptyBlock('code'), text: codeLines.join('\n') })
   return blocks.length ? blocks : [emptyBlock('text')]
+}
+
+/** m:ss -- how long a voice memo is ever worth showing. */
+function clock(seconds: number): string {
+  const whole = Math.max(0, Math.round(seconds))
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
 }
 
 export const CALLOUT_TINTS: TintName[] = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red']

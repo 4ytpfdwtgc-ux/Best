@@ -47,14 +47,14 @@ export function BlockMenu({
         Delete
       </button>
 
-      {!['image', 'link', 'file', 'table'].includes(block.type) && (
+      {!['image', 'link', 'file', 'audio', 'table'].includes(block.type) && (
         <>
       <div className="menu__sep" />
       <div className="menu__label">Turn into</div>
       <div className="blockmenu__grid">
         {/* A picture or a card cannot be conjured from text, and turning one
             into text would drop it silently, so neither is offered. */}
-        {BLOCK_MENU.filter((b) => !['divider', 'image', 'link', 'file', 'table'].includes(b.type)).map((item) => (
+        {BLOCK_MENU.filter((b) => !['divider', 'image', 'link', 'file', 'audio', 'table'].includes(b.type)).map((item) => (
           <button
             key={item.type}
             type="button"

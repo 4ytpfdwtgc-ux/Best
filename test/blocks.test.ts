@@ -182,6 +182,13 @@ test('a mark is recognised whether it is inside the selection or around it', () 
   assert.equal(hasMark('a lit word', 2, 5, MARKERS.highlight), false)
 })
 
+test('a voice memo copies out as a link, with how long it runs', () => {
+  const memo = { ...emptyBlock('audio'), text: 'Standup', assetId: 'file_1', duration: 92 }
+  assert.equal(blocksToMarkdown([memo]), '[Standup (1:32)](audio)')
+  const unnamed = { ...emptyBlock('audio'), assetId: 'file_2' }
+  assert.equal(blocksToMarkdown([unnamed]), '[Voice memo](audio)')
+})
+
 test('a picture survives a copy out as a markdown image', () => {
   const picture = { ...emptyBlock('image'), text: 'Ferry at dusk', assetId: 'img_1' }
   assert.equal(blocksToMarkdown([picture]), '![Ferry at dusk](picture)')

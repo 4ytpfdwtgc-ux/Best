@@ -4,6 +4,7 @@ import { NOTE_SCALES } from '../../types'
 import { TINTS } from '../../types'
 import type { MarkName } from '../../lib/inline'
 import { Icon } from '../ui/Icon'
+import { AttachMenu, type AttachAction } from './AttachMenu'
 
 /** The styles the sheet offers, in the order iOS Notes lists them. */
 const STYLES: { type: BlockType; label: string; glyph: string }[] = [
@@ -61,6 +62,7 @@ export function FormatBar({
   onBackground,
   onFont,
   onScale,
+  onAttach,
 }: {
   note: Note
   /** The block being edited, or the last one that was. */
@@ -74,8 +76,11 @@ export function FormatBar({
   onBackground: (tint?: TintName) => void
   onFont: (font: NoteFont) => void
   onScale: (scale: number) => void
+  /** The plus: a photo, the camera, a scan, a recording, a file. */
+  onAttach: (action: AttachAction) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [attaching, setAttaching] = useState(false)
   const scale = note.fontScale ?? 1
   const step = (delta: number) => {
     const at = NOTE_SCALES.indexOf(scale as (typeof NOTE_SCALES)[number])
@@ -90,7 +95,7 @@ export function FormatBar({
 
   return (
     <div className="fmt" contentEditable={false}>
-      {open && (
+      {open && !attaching && (
         <div className="fmt__sheet" role="dialog" aria-label="Format">
           <Group label="Style">
             {STYLES.map((s) => (
@@ -185,12 +190,39 @@ export function FormatBar({
         </div>
       )}
 
+      {attaching && (
+        <AttachMenu
+          onPick={(action) => {
+            setAttaching(false)
+            onAttach(action)
+          }}
+          onClose={() => setAttaching(false)}
+        />
+      )}
+
       <div className="fmt__bar">
+        <button
+          type="button"
+          className={`fmt__btn fmt__plus${attaching ? ' is-on' : ''}`}
+          onPointerDown={hold}
+          onClick={() => {
+            setOpen(false)
+            setAttaching((v) => !v)
+          }}
+          aria-expanded={attaching}
+          aria-label="Attach a photo, a scan, a recording or a file"
+        >
+          <Icon name="plus" size={17} strokeWidth={2} />
+        </button>
+
         <button
           type="button"
           className={`fmt__btn fmt__aa${open ? ' is-on' : ''}`}
           onPointerDown={hold}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            setAttaching(false)
+            setOpen((v) => !v)
+          }}
           aria-expanded={open}
           aria-label="Style, font and colour"
         >

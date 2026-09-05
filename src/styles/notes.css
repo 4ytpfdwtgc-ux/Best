@@ -1066,3 +1066,120 @@
   line-height: 1;
 }
 .fmt__swatch.is-on { border-color: var(--accent); }
+
+/* Attach menu ------------------------------------------------------- */
+
+.attach {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-window);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  max-height: min(52vh, 440px);
+  overflow-y: auto;
+}
+.attach__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.attach__item:hover { background: var(--bg-hover); }
+.attach__icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+.attach__text { display: flex; flex-direction: column; min-width: 0; }
+.attach__hint { font-size: 12px; color: var(--text-tertiary); }
+
+.fmt__plus { color: var(--accent); }
+
+/* A line of guidance under the page, for something iOS does and we ask for. */
+.page__hint {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: calc(64px + var(--keyboard, 0px));
+  z-index: 21;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg-window);
+  font-size: 13px;
+  text-align: center;
+  box-shadow: var(--shadow-pop);
+}
+
+/* Voice memos ------------------------------------------------------- */
+
+/* The name sits under the player, as a picture's caption does. */
+.blk--audio .blk__body { flex-direction: column; gap: 4px; }
+.blk--audio .blk__text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  width: 100%;
+}
+
+.audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.audio__icon { flex: none; color: var(--text-tertiary); display: grid; place-items: center; }
+.audio__player { flex: 1; min-width: 0; height: 34px; }
+.audio__len {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.audio__len--live { font-size: 15px; color: var(--text); }
+.audio__missing { flex: 1; font-size: 13px; color: var(--text-tertiary); }
+
+.audio--empty { border-style: dashed; }
+.audio__record {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.audio__record:disabled { opacity: 0.5; cursor: default; }
+.audio__dot,
+.audio__pulse {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tint-red);
+}
+.audio__pulse { animation: audio-pulse 1.1s ease-in-out infinite; }
+@keyframes audio-pulse {
+  50% { opacity: 0.25; }
+}
+.audio__error { font-size: 12px; color: var(--tint-red); }
