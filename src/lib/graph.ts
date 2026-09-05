@@ -198,7 +198,13 @@ const MIN_DISTANCE = 8
  * pages is half a million pair calculations a frame, and a real library is an
  * order of magnitude smaller. A quadtree would be the answer if it ever were.
  */
-export function tick(graph: Graph, forces: Forces, alpha: number): void {
+export function tick(
+  graph: Graph,
+  forces: Forces,
+  alpha: number,
+  /** The caller's node lookup, so a frame does not have to build one. */
+  index: Map<string, GraphNode> = new Map(graph.nodes.map((n) => [n.id, n])),
+): void {
   const { nodes, links } = graph
 
   for (let i = 0; i < nodes.length; i++) {
@@ -224,7 +230,6 @@ export function tick(graph: Graph, forces: Forces, alpha: number): void {
     }
   }
 
-  const index = new Map(nodes.map((n) => [n.id, n]))
   for (const link of links) {
     const a = index.get(link.source)
     const b = index.get(link.target)

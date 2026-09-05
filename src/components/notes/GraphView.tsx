@@ -9,6 +9,38 @@ import { addNote, setSelectedNote, updateNote } from '../../state/actions'
 import { Icon } from '../ui/Icon'
 import { ToolButton } from '../ui/primitives'
 
+interface Palette {
+  ink: string
+  /** Lines between pages. Not the hairline the app rules its panels with: on
+   *  white that is very nearly white, and the web looked like dots and air. */
+  edge: string
+  paper: string
+  accent: string
+  font: string
+  tint: (name: TintName) => string
+}
+
+/** Every colour the web is drawn in, read from the stylesheet in one go. */
+function readPalette(): Palette {
+  const styles = getComputedStyle(document.documentElement)
+  const read = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
+  const tints = new Map<string, string>()
+  return {
+    ink: read('--text', '#37352f'),
+    edge: read('--text-tertiary', '#9b9a97'),
+    paper: read('--bg-window', '#ffffff'),
+    accent: read('--accent', '#2383e2'),
+    font: read('--font', 'system-ui'),
+    tint: (name) => {
+      const known = tints.get(name)
+      if (known) return known
+      const value = read(`--tint-${name}`, '#888')
+      tints.set(name, value)
+      return value
+    },
+  }
+}
+
 /** Nodes are coloured by the folder they live in, cycling the tint palette. */
 const FOLDER_TINTS: TintName[] = ['blue', 'purple', 'green', 'orange', 'pink', 'teal', 'red', 'indigo']
 
@@ -68,8 +100,27 @@ export function GraphView({
   const frameRef = useRef<number>()
   /** The first web has to be framed; after that the camera is the reader's. */
   const framedRef = useRef(false)
+  /*
+   * Everything below is measured or resolved once and kept, because it used to
+   * be done per frame -- the canvas box (a layout), the theme's colours (a
+   * style resolution, once per node), and the node lookup (an allocation).
+   * Sixty times a second, on a phone, that was most of the frame.
+   */
+  const boxRef = useRef({ left: 0, top: 0, width: 0, height: 0 })
+  const paletteRef = useRef<Palette | null>(null)
+  const indexRef = useRef(new Map<string, GraphNode>())
+  /** Ask for a frame. The loop stops when there is nothing left to draw. */
+  const kickRef = useRef<() => void>(() => {})
+  const runningRef = useRef(false)
+  const dirtyRef = useRef(true)
   /** Frame it once it has stopped moving, not while it is still spreading out. */
   const pendingFitRef = useRef(false)
+
+  /*
+   * Turning names on or off changes the picture and nothing else -- no new
+   * graph, nothing moving to simulate -- so the frame has to be asked for.
+   */
+  useEffect(() => kickRef.current(), [labels])
 
   const folderTint = useCallback(
     (node: GraphNode) => {
@@ -84,7 +135,7 @@ export function GraphView({
   const fit = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const box = canvas.getBoundingClientRect()
+    const box = boxRef.current.width ? boxRef.current : canvas.getBoundingClientRect()
     const bounds = graphBounds(graphRef.current)
     const zoom = Math.min(3, Math.max(0.15, Math.min(box.width / (bounds.width + 80), box.height / (bounds.height + 80))))
     cameraRef.current = {
@@ -114,7 +165,10 @@ export function GraphView({
       kept++
     }
     graphRef.current = graph
+    indexRef.current = new Map(graph.nodes.map((n) => [n.id, n]))
     alphaRef.current = ALPHA_START
+    dirtyRef.current = true
+    kickRef.current()
     hoverRef.current = null
     setHovered(null)
     // Only frame it again when this is a different web, not a filtered one.
@@ -130,7 +184,12 @@ export function GraphView({
     pendingFitRef.current = true
   }, [graph, fit])
 
-  /* The loop: cool the simulation, draw, repeat until it stops moving. */
+  /*
+   * The loop: cool the simulation, draw, and stop when there is nothing left
+   * to do. It used to ask for a frame forever, which on a phone is a wake-up
+   * sixty times a second for a picture that is not changing -- and the reason
+   * a tap or a pinch felt a beat behind.
+   */
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -139,30 +198,29 @@ export function GraphView({
 
     const resize = () => {
       const box = canvas.getBoundingClientRect()
+      boxRef.current = { left: box.left, top: box.top, width: box.width, height: box.height }
       const ratio = window.devicePixelRatio || 1
       canvas.width = Math.round(box.width * ratio)
       canvas.height = Math.round(box.height * ratio)
       context.setTransform(ratio, 0, 0, ratio, 0, 0)
-      draw()
+      dirtyRef.current = true
+      kick()
     }
 
     const draw = () => {
-      const box = canvas.getBoundingClientRect()
+      const box = boxRef.current
       const camera = cameraRef.current
       const { nodes, links } = graphRef.current
-      const styles = getComputedStyle(document.documentElement)
-      const ink = styles.getPropertyValue('--text').trim() || '#333'
-      const faint = styles.getPropertyValue('--line').trim() || '#ddd'
-      const paper = styles.getPropertyValue('--bg-window').trim() || '#fff'
-      const tint = (name: TintName) => styles.getPropertyValue(`--tint-${name}`).trim() || '#888'
+      const paint = paletteRef.current ?? (paletteRef.current = readPalette())
+      const index = indexRef.current
+      const scale = 1 / camera.zoom
 
       context.save()
-      context.fillStyle = paper
+      context.fillStyle = paint.paper
       context.fillRect(0, 0, box.width, box.height)
       context.translate(camera.x, camera.y)
       context.scale(camera.zoom, camera.zoom)
 
-      const index = new Map(nodes.map((n) => [n.id, n]))
       const near = hoverRef.current
       const lit = new Set<string>()
       if (near) {
@@ -173,52 +231,58 @@ export function GraphView({
         }
       }
 
-      context.lineWidth = 1 / camera.zoom
       for (const link of links) {
         const a = index.get(link.source)
         const b = index.get(link.target)
         if (!a || !b) continue
         const involved = !near || (lit.has(a.id) && lit.has(b.id))
-        context.strokeStyle = involved ? (near ? tint('blue') : faint) : faint
-        context.globalAlpha = near ? (involved ? 0.9 : 0.12) : link.nested ? 0.45 : 0.75
-        if (link.nested) context.setLineDash([3 / camera.zoom, 3 / camera.zoom])
+        context.strokeStyle = near && involved ? paint.accent : paint.edge
+        context.globalAlpha = near ? (involved ? 1 : 0.1) : link.nested ? 0.5 : 0.9
+        context.lineWidth = (near && involved ? 2 : link.nested ? 1 : 1.3) * scale
+        if (link.nested) context.setLineDash([4 * scale, 4 * scale])
         context.beginPath()
         context.moveTo(a.x, a.y)
         context.lineTo(b.x, b.y)
         context.stroke()
-        context.setLineDash([])
+        if (link.nested) context.setLineDash([])
       }
 
+      context.textAlign = 'center'
+      context.textBaseline = 'top'
       for (const node of nodes) {
         const radius = nodeRadius(node)
-        const dimmed = near ? (lit.has(node.id) ? 1 : 0.18) : 1
-        context.globalAlpha = dimmed
+        context.globalAlpha = near ? (lit.has(node.id) ? 1 : 0.2) : 1
         context.beginPath()
         context.arc(node.x, node.y, radius, 0, Math.PI * 2)
-        if (node.ghost) {
-          context.strokeStyle = tint(folderTintFor(node))
-          context.lineWidth = 1.6 / camera.zoom
-          context.stroke()
-        } else {
-          context.fillStyle = tint(folderTintFor(node))
-          context.fill()
-        }
+        /*
+         * A ring of the page's own colour behind every dot. Two dots that
+         * overlap read as two, and a dot sitting on a line is not cut in half
+         * by it.
+         */
+        context.fillStyle = node.ghost ? paint.paper : paint.tint(folderTint(node))
+        context.fill()
+        context.strokeStyle = node.ghost ? paint.edge : paint.paper
+        context.lineWidth = (node.ghost ? 2 : 1.5) * scale
+        context.stroke()
         if (node.id === focusRef.current) {
-          context.strokeStyle = ink
-          context.lineWidth = 2 / camera.zoom
+          context.strokeStyle = paint.ink
+          context.lineWidth = 2.5 * scale
           context.stroke()
         }
 
         // Labels only where they can be read: close enough in, or the one
         // under the pointer. Otherwise the web disappears under its own names.
-        const named = node.id === hoverRef.current?.id || (labelsRef.current && camera.zoom > 0.55)
-        if (named) {
-          context.globalAlpha = dimmed
-          context.fillStyle = ink
-          context.font = `${11 / camera.zoom}px ${styles.getPropertyValue('--font') || 'system-ui'}`
-          context.textAlign = 'center'
-          context.textBaseline = 'top'
-          context.fillText(clip(node.title), node.x, node.y + radius + 3 / camera.zoom)
+        if (node.id === near?.id || (labelsRef.current && camera.zoom > 0.55)) {
+          context.font = `${11 * scale}px ${paint.font}`
+          const y = node.y + radius + 3 * scale
+          // Drawn on a halo of the background, so a name over a line is still
+          // a name.
+          context.lineWidth = 3 * scale
+          context.strokeStyle = paint.paper
+          context.lineJoin = 'round'
+          context.strokeText(clip(node.title), node.x, y)
+          context.fillStyle = paint.ink
+          context.fillText(clip(node.title), node.x, y)
         }
       }
 
@@ -226,40 +290,73 @@ export function GraphView({
       context.globalAlpha = 1
     }
 
-    const folderTintFor = (node: GraphNode) => folderTint(node)
-
     const loop = () => {
-      if (alphaRef.current > ALPHA_MIN) {
-        tick(graphRef.current, forcesRef.current, alphaRef.current)
+      const moving = alphaRef.current > ALPHA_MIN
+      if (moving) {
+        tick(graphRef.current, forcesRef.current, alphaRef.current, indexRef.current)
         alphaRef.current *= ALPHA_DECAY
-        // A web spreads out as it settles, over several seconds. Framing it
-        // once at the start would leave it hanging off the canvas, and framing
-        // it only at the end would leave the corner of it on screen until
-        // then -- so it is kept framed the whole way, until it stops or the
-        // reader takes hold of the camera.
+        /*
+         * A web spreads out as it settles, over several seconds. Framing it
+         * once at the start would leave it hanging off the canvas, and framing
+         * it only at the end would leave the corner of it on screen until
+         * then -- so it is kept framed the whole way, until it stops or the
+         * reader takes hold of the camera.
+         */
         if (pendingFitRef.current) fit()
-        draw()
+        dirtyRef.current = true
       } else if (pendingFitRef.current) {
         pendingFitRef.current = false
         fit()
+        dirtyRef.current = true
+      }
+
+      if (dirtyRef.current) {
+        dirtyRef.current = false
         draw()
       }
-      frameRef.current = requestAnimationFrame(loop)
+      if (moving || dirtyRef.current) {
+        frameRef.current = requestAnimationFrame(loop)
+      } else {
+        runningRef.current = false
+      }
     }
 
+    function kick() {
+      dirtyRef.current = true
+      if (runningRef.current) return
+      runningRef.current = true
+      frameRef.current = requestAnimationFrame(loop)
+    }
+    kickRef.current = kick
+
     resize()
-    frameRef.current = requestAnimationFrame(loop)
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
+    // The theme can change without this component hearing about it, and every
+    // colour it draws with came from the stylesheet.
+    const themes = new MutationObserver(() => {
+      paletteRef.current = null
+      kick()
+    })
+    themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] })
+
     return () => {
       cancelAnimationFrame(frameRef.current ?? 0)
+      runningRef.current = false
       observer.disconnect()
+      themes.disconnect()
     }
   }, [folderTint, fit])
 
-  /** Wake the simulation: something moved, so let it settle again. */
+  /**
+   * Something moved: settle again, and draw.
+   *
+   * `to` of zero means only the picture changed -- a pan, a zoom, a hover --
+   * so there is a frame to draw but nothing to re-simulate.
+   */
   const reheat = (to = 0.45) => {
     alphaRef.current = Math.max(alphaRef.current, to)
+    kickRef.current()
   }
 
   /* ---------------------------------------------------------------- */
@@ -271,7 +368,9 @@ export function GraphView({
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null)
 
   const atPointer = (e: React.PointerEvent): { x: number; y: number } => {
-    const box = canvasRef.current!.getBoundingClientRect()
+    // From the box measured at the last resize or press, not a fresh one: a
+    // getBoundingClientRect per pointer move is a layout per pointer move.
+    const box = boxRef.current
     const camera = cameraRef.current
     return {
       x: (e.clientX - box.left - camera.x) / camera.zoom,
@@ -296,7 +395,12 @@ export function GraphView({
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     // Touching it makes the camera the reader's: no automatic framing after.
     pendingFitRef.current = false
-    canvasRef.current?.setPointerCapture(e.pointerId)
+    const canvas = canvasRef.current
+    if (canvas) {
+      const box = canvas.getBoundingClientRect()
+      boxRef.current = { left: box.left, top: box.top, width: box.width, height: box.height }
+    }
+    canvas?.setPointerCapture(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()]
@@ -317,7 +421,7 @@ export function GraphView({
     if (pinchRef.current && pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()]
       const distance = Math.hypot(a.x - b.x, a.y - b.y)
-      const box = canvasRef.current!.getBoundingClientRect()
+      const box = boxRef.current
       zoomAt(
         (pinchRef.current.zoom * distance) / (pinchRef.current.distance || 1),
         (a.x + b.x) / 2 - box.left,
@@ -381,7 +485,7 @@ export function GraphView({
 
   function onWheel(e: React.WheelEvent<HTMLCanvasElement>) {
     pendingFitRef.current = false
-    const box = canvasRef.current!.getBoundingClientRect()
+    const box = boxRef.current
     zoomAt(cameraRef.current.zoom * Math.exp(-e.deltaY / 320), e.clientX - box.left, e.clientY - box.top)
   }
 
@@ -440,6 +544,7 @@ export function GraphView({
             if (dragRef.current) return
             hoverRef.current = null
             setHovered(null)
+            kickRef.current()
           }}
           onWheel={onWheel}
         />
