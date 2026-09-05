@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { AppState, EventOccurrence } from '../../types'
 import { occurrencesOnDay } from '../../state/selectors'
 import { moveEvent } from '../../lib/reschedule'
+import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP } from '../../lib/gestures'
 import { updateEvent } from '../../state/actions'
 import { diffDays } from '../../lib/date'
 import {
@@ -65,11 +66,12 @@ export function MonthView({
     }
 
     // A finger holds first; the month grid scrolls under it otherwise.
-    if (touch) holdTimer = window.setTimeout(engage, 350)
+    if (touch) holdTimer = window.setTimeout(engage, TOUCH_HOLD_MS)
 
     const onMove = (ev: PointerEvent) => {
       if (!engaged) {
-        const far = Math.abs(ev.clientX - startX) > 4 || Math.abs(ev.clientY - startY) > 4
+        const slop = touch ? TOUCH_SLOP : DRAG_SLOP
+        const far = Math.abs(ev.clientX - startX) > slop || Math.abs(ev.clientY - startY) > slop
         if (touch) {
           if (far) cleanup()
           return

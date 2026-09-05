@@ -17,12 +17,16 @@ export interface NoteRow {
 /**
  * Arrange visible pages as a tree.
  *
+ * Every page starts folded shut and only opens when its own control is
+ * tapped. Nothing expands a branch on its own: a list that rearranges itself
+ * while you are reading it is worse than one you have to open.
+ *
  * A page whose parent is not itself visible — filtered out by a search, or
  * sitting in another folder — is shown at the top level rather than hidden
  * under a parent that is not there. Depth is capped so a deep chain cannot
  * indent a row off the side of a phone.
  */
-export function noteTree(notes: Note[], collapsed: ReadonlySet<ID>, maxDepth = 4): NoteRow[] {
+export function noteTree(notes: Note[], expanded: ReadonlySet<ID>, maxDepth = 4): NoteRow[] {
   const present = new Set(notes.map((n) => n.id))
   const children = new Map<ID | 'root', Note[]>()
   for (const note of notes) {
@@ -54,7 +58,8 @@ export function noteTree(notes: Note[], collapsed: ReadonlySet<ID>, maxDepth = 4
     for (const note of children.get(key) ?? []) {
       const kids = children.get(note.id) ?? []
       rows.push({ note, depth: Math.min(depth, maxDepth), hasChildren: kids.length > 0 })
-      if (kids.length && !collapsed.has(note.id)) walk(note.id, depth + 1)
+      // Folded shut unless this page has been opened by hand.
+      if (kids.length && expanded.has(note.id)) walk(note.id, depth + 1)
     }
   }
   walk('root', 0)

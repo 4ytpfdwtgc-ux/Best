@@ -124,9 +124,11 @@ absolute ones would resolve to the domain root and break the installed app.
   camera. Several at once become several blocks, the block's own text is the
   caption, and tapping a picture opens it full-screen.
 - **Pages nest inside pages.** A page keeps only its parent's id, so the tree
-  is derived rather than stored and moving one is a single field. The list
-  folds and unfolds, the breadcrumb walks back up, and deleting or archiving a
-  page carries whatever is nested under it.
+  is derived rather than stored and moving one is a single field. Every branch
+  starts folded and opens only when its own control is tapped — nothing
+  expands on its own, including adding a subpage. A search shows its matches
+  flat rather than opening branches to reveal them. The breadcrumb walks back
+  up, and deleting or archiving a page carries whatever is nested under it.
 - **Links in the writing**: `[text](url)` becomes a link, and `[[Page name]]`
   links to another page — creating it if it does not exist yet, since writing
   the link is usually how a page comes to exist. Each page lists the pages that
@@ -266,6 +268,20 @@ src/
 test/                    Unit tests: dates, recurrence, blocks, inline marks,
                          iCalendar output and the capture parser
 ```
+
+### Gestures
+
+`lib/gestures.ts` holds every threshold in the app behind one `SENSITIVITY`
+number. Below 1 a gesture asks for more movement and a longer hold before it
+engages; it is currently 0.7, so a swipe needs 11px to start and 103px to
+commit, a drag needs 6px, and a finger holds for half a second before it picks
+anything up. They used to be five magic numbers in five files, which meant
+"the app is too twitchy" had no single answer.
+
+A swiped-away row leaves in two beats: it slides out under its own width and
+fades over 260ms while its height is held, then the gap it occupied closes
+over 200ms. Removing it outright made the whole list jump, which is what read
+as abrupt. Under `prefers-reduced-motion` it simply goes.
 
 ### Two implementation notes
 

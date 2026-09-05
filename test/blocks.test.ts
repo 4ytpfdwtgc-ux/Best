@@ -8,6 +8,9 @@ import { decorateInline, toggleMark } from '../src/lib/inline.ts'
 import type { Block, Note, Reminder } from '../src/types.ts'
 import { noteToMarkdown, remindersToText, shareFilename } from '../src/lib/share.ts'
 import { noteTree } from '../src/lib/notes.ts'
+import {
+  DRAG_SLOP, SENSITIVITY, SWIPE_COMMIT, SWIPE_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP,
+} from '../src/lib/gestures.ts'
 
 const block = (type: Block['type'], text: string, indent = 0, extra: Partial<Block> = {}): Block => ({
   ...emptyBlock(type, indent),
@@ -197,14 +200,20 @@ const page = (id: string, parentId?: string): Note => ({
   tags: [], createdAt: '', updatedAt: '',
 })
 
-test('pages nest, and a folded page hides what is inside it', () => {
+test('every branch starts folded, and opens only when named', () => {
   const notes = [page('a'), page('a1', 'a'), page('a1x', 'a1'), page('b')]
-  const open = noteTree(notes, new Set())
-  assert.deepEqual(open.map((r) => [r.note.id, r.depth]), [['a', 0], ['a1', 1], ['a1x', 2], ['b', 0]])
-  assert.deepEqual(open.map((r) => r.hasChildren), [true, true, false, false])
 
-  const folded = noteTree(notes, new Set(['a']))
-  assert.deepEqual(folded.map((r) => r.note.id), ['a', 'b'])
+  // Nothing expands on its own: the top level, and the fact that there is more.
+  const shut = noteTree(notes, new Set())
+  assert.deepEqual(shut.map((r) => [r.note.id, r.depth]), [['a', 0], ['b', 0]])
+  assert.deepEqual(shut.map((r) => r.hasChildren), [true, false])
+
+  // Opening one tier shows that tier and no further.
+  const one = noteTree(notes, new Set(['a']))
+  assert.deepEqual(one.map((r) => [r.note.id, r.depth]), [['a', 0], ['a1', 1], ['b', 0]])
+
+  const two = noteTree(notes, new Set(['a', 'a1']))
+  assert.deepEqual(two.map((r) => [r.note.id, r.depth]), [['a', 0], ['a1', 1], ['a1x', 2], ['b', 0]])
 })
 
 test('a page whose parent is filtered out is shown rather than hidden', () => {
@@ -217,7 +226,7 @@ test('a page whose parent is filtered out is shown rather than hidden', () => {
 test('depth is capped so a deep chain cannot indent off the side', () => {
   const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
   const chain = ids.map((id, i) => page(id, i ? ids[i - 1] : undefined))
-  const rows = noteTree(chain, new Set(), 3)
+  const rows = noteTree(chain, new Set(ids), 3)
   assert.deepEqual(rows.map((r) => r.depth), [0, 1, 2, 3, 3, 3, 3])
 })
 
@@ -230,15 +239,16 @@ test('a page in a cycle is still shown, rather than vanishing', () => {
 
 test('every visible page appears exactly once, whatever the parent links say', () => {
   const notes = [page('a'), page('a1', 'a'), page('orphan', 'gone'), page('b', 'a1')]
-  const ids = noteTree(notes, new Set()).map((r) => r.note.id)
+  const ids = noteTree(notes, new Set(['a', 'a1'])).map((r) => r.note.id)
   assert.equal(ids.length, notes.length)
   assert.equal(new Set(ids).size, notes.length)
 })
 
 test('folding hides children without the cycle guard bringing them back', () => {
   const notes = [page('a'), page('a1', 'a'), page('a1x', 'a1'), page('b')]
-  assert.deepEqual(noteTree(notes, new Set(['a'])).map((r) => r.note.id), ['a', 'b'])
-  assert.deepEqual(noteTree(notes, new Set(['a1'])).map((r) => r.note.id), ['a', 'a1', 'b'])
+  // The guard exists to rescue unreachable pages, not to leak folded ones.
+  assert.deepEqual(noteTree(notes, new Set()).map((r) => r.note.id), ['a', 'b'])
+  assert.deepEqual(noteTree(notes, new Set(['a'])).map((r) => r.note.id), ['a', 'a1', 'b'])
 })
 
 /* Tables ------------------------------------------------------------ */
@@ -306,4 +316,29 @@ test('a filename is slugged, dated, and never empty', () => {
   assert.equal(shareFilename('Trip planning!', 'md', on), 'trip-planning-2026-09-04.md')
   assert.equal(shareFilename('   ', 'md', on), 'cadence-2026-09-04.md')
   assert.equal(shareFilename('#!?', 'md', on), 'cadence-2026-09-04.md')
+})
+
+test('the sensitivity knob makes every gesture ask for more', () => {
+  // The point of the shared constants: one number moves all of them together.
+  assert.equal(SENSITIVITY, 0.7)
+  assert.equal(SWIPE_SLOP, 11)
+  assert.equal(SWIPE_COMMIT, 103)
+  assert.equal(DRAG_SLOP, 6)
+  assert.equal(TOUCH_SLOP, 11)
+  // A hold is less sensitive when it is longer, so it scales the other way.
+  assert.equal(TOUCH_HOLD_MS, 500)
+})
+
+test('a gesture asks for roughly a third more than it used to', () => {
+  const before = { slop: 8, commit: 72, drag: 4, hold: 350 }
+  const ratio = (now: number, was: number) => now / was
+  for (const [now, was] of [
+    [SWIPE_SLOP, before.slop],
+    [SWIPE_COMMIT, before.commit],
+    [DRAG_SLOP, before.drag],
+    [TOUCH_HOLD_MS, before.hold],
+  ] as const) {
+    const r = ratio(now, was)
+    assert.ok(r > 1.35 && r < 1.55, `expected about 1.43x, got ${r.toFixed(2)}`)
+  }
 })

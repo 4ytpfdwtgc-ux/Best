@@ -310,7 +310,43 @@
   background: var(--swipe-bg, var(--bg-sidebar));
   will-change: transform;
 }
-.swipe__content.is-settling { transition: transform 0.18s var(--ease); }
+.swipe__content.is-settling { transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+/*
+ * Leaving in two beats: the row slides out under its own width, then the space
+ * it held closes up. Snapping the row out of existence made the whole list
+ * jump, which is what read as abrupt.
+ */
+.swipe.is-leaving {
+  height: var(--swipe-h);
+  overflow: hidden;
+  animation: swipe-collapse 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) 0.26s forwards;
+}
+.swipe.is-leaving .swipe__content {
+  transition: transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
+  opacity: 0;
+}
+.swipe.is-leaving--right .swipe__content { transform: translateX(-100%); }
+.swipe.is-leaving--left .swipe__content { transform: translateX(100%); }
+
+@keyframes swipe-collapse {
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* No sliding for a viewer who has asked for less motion; it just goes. */
+@media (prefers-reduced-motion: reduce) {
+  .swipe__content.is-settling { transition: none; }
+  .swipe.is-leaving,
+  .swipe.is-leaving .swipe__content {
+    animation: none;
+    transition: none;
+    opacity: 0;
+  }
+}
 
 .swipe__action {
   position: absolute;

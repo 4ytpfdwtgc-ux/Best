@@ -5,6 +5,7 @@ import {
   diffDays, formatHourLabel, formatTime, formatWeekdayShort, timeFromMinutes, todayISO,
 } from '../../lib/date'
 import { limitToTime, moveEvent, resizeEvent } from '../../lib/reschedule'
+import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP } from '../../lib/gestures'
 import { updateEvent } from '../../state/actions'
 
 const HOUR_PX = 46
@@ -77,7 +78,7 @@ export function TimeGrid({
      * A mouse has no such conflict, so it engages as soon as it has moved.
      */
     movedRef.current = false
-    if (touch) holdTimer = window.setTimeout(engage, 350)
+    if (touch) holdTimer = window.setTimeout(engage, TOUCH_HOLD_MS)
 
     const onMove = (ev: PointerEvent) => {
       const dx = ev.clientX - startX
@@ -85,10 +86,10 @@ export function TimeGrid({
       if (!engaged) {
         if (touch) {
           // Moving before the hold completes is a scroll, not a drag.
-          if (Math.abs(dx) > 8 || Math.abs(dy) > 8) cleanup()
+          if (Math.abs(dx) > TOUCH_SLOP || Math.abs(dy) > TOUCH_SLOP) cleanup()
           return
         }
-        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+        if (Math.abs(dx) < DRAG_SLOP && Math.abs(dy) < DRAG_SLOP) return
         engage()
       }
 

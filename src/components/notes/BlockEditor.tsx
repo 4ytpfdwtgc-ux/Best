@@ -7,6 +7,7 @@ import {
 import { focusBlock, getCaretOffset, isCaretAtEnd, isCaretAtStart } from '../../lib/caret'
 import { AssetError, putFile, putImage } from '../../lib/assets'
 import { linkTitleFromURL, normalizeURL } from '../../lib/links'
+import { DRAG_SLOP } from '../../lib/gestures'
 import { toggleMark } from '../../lib/inline'
 import { addNote, noteTitle, setBlocks, setSelectedNote, updateNote } from '../../state/actions'
 import { backlinksTo, findNoteByTitle } from '../../state/selectors'
@@ -254,7 +255,7 @@ export function BlockEditor({ note }: { note: Note }) {
     let moved = false
 
     const onMove = (ev: PointerEvent) => {
-      if (Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) < 4) return
+      if (Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) < DRAG_SLOP) return
       moved = true
       const target = document
         .elementFromPoint(ev.clientX, ev.clientY)

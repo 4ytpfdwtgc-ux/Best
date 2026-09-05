@@ -25,10 +25,25 @@ export function NotesApp({
   const [query, setQuery] = useState('')
 
   const notes = useMemo(() => visibleNotes(state, query), [state, query])
-  // Which pages are folded shut. View state, not the page's own, so it is not
-  // persisted and not shared between one person's devices.
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
-  const rows = useMemo(() => noteTree(notes, collapsed), [notes, collapsed])
+  /*
+   * Which pages have been opened by hand. Empty to begin with, so every branch
+   * starts folded; nothing here ever opens one on its own. View state rather
+   * than the page's own, so it is not persisted or carried between devices.
+   */
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  /*
+   * A search shows its matches flat. Nesting them would hide a match inside a
+   * folded parent, and opening the parents to reveal it would be exactly the
+   * self-expanding behaviour this avoids.
+   */
+  const searching = query.trim().length > 0
+  const rows = useMemo(
+    () =>
+      searching
+        ? notes.map((note) => ({ note, depth: 0, hasChildren: false }))
+        : noteTree(notes, expanded),
+    [notes, expanded, searching],
+  )
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
   const trashCount = state.notes.filter((n) => n.trashedAt).length
   const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
@@ -227,13 +242,13 @@ export function NotesApp({
                 <button
                   type="button"
                   className={`note-row__twist${hasChildren ? '' : ' is-empty'}${
-                    collapsed.has(note.id) ? '' : ' is-open'
+                    expanded.has(note.id) ? ' is-open' : ''
                   }`}
-                  aria-label={collapsed.has(note.id) ? 'Show pages inside' : 'Hide pages inside'}
-                  aria-expanded={hasChildren ? !collapsed.has(note.id) : undefined}
+                  aria-label={expanded.has(note.id) ? 'Hide pages inside' : 'Show pages inside'}
+                  aria-expanded={hasChildren ? expanded.has(note.id) : undefined}
                   tabIndex={hasChildren ? 0 : -1}
                   onClick={() =>
-                    setCollapsed((current) => {
+                    setExpanded((current) => {
                       if (!hasChildren) return current
                       const next = new Set(current)
                       if (next.has(note.id)) next.delete(note.id)
@@ -274,13 +289,8 @@ export function NotesApp({
                     onClick={() => {
                       const child = addSubpage(note.id)
                       if (!child) return
-                      // A new child is useless folded away.
-                      setCollapsed((current) => {
-                        if (!current.has(note.id)) return current
-                        const next = new Set(current)
-                        next.delete(note.id)
-                        return next
-                      })
+                      // The new page opens in the editor; the branch in the
+                      // list stays shut, because nothing opens one but a tap.
                       setSelectedNote(child.id)
                     }}
                   >
