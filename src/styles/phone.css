@@ -93,6 +93,23 @@ body {
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 700px) {
+  /*
+   * A panel stands in for the keyboard rather than perching above it, so it
+   * runs to both edges the way the keyboard does and squares off where the
+   * two meet. The bar keeps its own corners: it is what stays behind.
+   */
+  .fmt { padding: 0 0 calc(6px + env(safe-area-inset-bottom)); }
+  .fmt > * { max-width: none; }
+  .fmt__sheet,
+  .attach {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    max-height: min(46vh, 380px);
+  }
+  .fmt__bar { border-radius: 0; border-left: 0; border-right: 0; }
+
   :root { --tg-gutter: 46px; }
 
   body { font-size: 14px; }

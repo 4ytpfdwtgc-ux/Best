@@ -63,6 +63,10 @@ export function FormatBar({
   onFont,
   onScale,
   onAttach,
+  onPause,
+  onResume,
+  onDone,
+  focusedAt,
 }: {
   note: Note
   /** The block being edited, or the last one that was. */
@@ -78,6 +82,18 @@ export function FormatBar({
   onScale: (scale: number) => void
   /** The plus: a photo, the camera, a scan, a recording, a file. */
   onAttach: (action: AttachAction) => void
+  /** Put the keyboard away, so a panel can have the room it was using. */
+  onPause: () => void
+  /** Bring it back, with the caret where it was. */
+  onResume: () => void
+  /** Finished writing: keyboard away, bar gone. */
+  onDone: () => void
+  /**
+   * Rises whenever a block takes focus. Going back to the writing puts a
+   * panel away, or the keyboard would come up underneath it and the two would
+   * be sharing the screen again.
+   */
+  focusedAt: number
 }) {
   const [open, setOpen] = useState(false)
   const [attaching, setAttaching] = useState(false)
@@ -88,15 +104,51 @@ export function FormatBar({
     onScale(next)
   }
 
+  useEffect(() => {
+    setOpen(false)
+    setAttaching(false)
+  }, [focusedAt])
+
   useKeyboardInset()
 
   /* A press must not take focus from the text it is about to format. */
   const hold = (e: React.PointerEvent | React.MouseEvent) => e.preventDefault()
 
+  /**
+   * A panel replaces the keyboard rather than stacking on top of it.
+   *
+   * On a phone the keyboard already owns half the screen. A card that opens
+   * above it gets whatever is left, which on a small screen is a scrolling
+   * sliver -- and the writing it is meant to be formatting is pushed off
+   * entirely. So opening one puts the keyboard away and takes the room it was
+   * using, which is what iOS does with the same panel; closing it brings the
+   * keyboard back with the caret where it was left.
+   */
+  const show = (panel: 'format' | 'attach' | null) => {
+    const wasOpen = open || attaching
+    setOpen(panel === 'format')
+    setAttaching(panel === 'attach')
+    if (panel) onPause()
+    else if (wasOpen) onResume()
+  }
+
   return (
     <div className="fmt" contentEditable={false}>
       {open && !attaching && (
         <div className="fmt__sheet" role="dialog" aria-label="Format">
+          <div className="fmt__head">
+            <span className="fmt__title">Format</span>
+            <button
+              type="button"
+              className="fmt__close"
+              onPointerDown={hold}
+              onClick={() => show(null)}
+              aria-label="Close formatting"
+            >
+              <Icon name="close" size={15} strokeWidth={2.2} />
+            </button>
+          </div>
+
           <Group label="Style">
             {STYLES.map((s) => (
               <Choice
@@ -193,22 +245,21 @@ export function FormatBar({
       {attaching && (
         <AttachMenu
           onPick={(action) => {
+            // The action either opens a picker or wants the caret back.
             setAttaching(false)
             onAttach(action)
           }}
-          onClose={() => setAttaching(false)}
+          onClose={() => show(null)}
         />
       )}
 
       <div className="fmt__bar">
+        <div className="fmt__scroll">
         <button
           type="button"
           className={`fmt__btn fmt__plus${attaching ? ' is-on' : ''}`}
           onPointerDown={hold}
-          onClick={() => {
-            setOpen(false)
-            setAttaching((v) => !v)
-          }}
+          onClick={() => show(attaching ? null : 'attach')}
           aria-expanded={attaching}
           aria-label="Attach a photo, a scan, a recording or a file"
         >
@@ -219,10 +270,7 @@ export function FormatBar({
           type="button"
           className={`fmt__btn fmt__aa${open ? ' is-on' : ''}`}
           onPointerDown={hold}
-          onClick={() => {
-            setAttaching(false)
-            setOpen((v) => !v)
-          }}
+          onClick={() => show(open ? null : 'format')}
           aria-expanded={open}
           aria-label="Style, font and colour"
         >
@@ -268,6 +316,27 @@ export function FormatBar({
           title="Indent"
         >
           <Icon name="chevronRight" size={15} strokeWidth={2.2} />
+        </button>
+        </div>
+
+        {/*
+          * Done sits outside the scrolling row. On a narrow phone the marks
+          * run past the edge, and the one button that puts everything away
+          * must never be the one scrolled off it.
+          */}
+        <button
+          type="button"
+          className="fmt__btn fmt__done"
+          onPointerDown={hold}
+          onClick={() => {
+            setOpen(false)
+            setAttaching(false)
+            onDone()
+          }}
+          aria-label="Done editing"
+          title="Done"
+        >
+          <Icon name="chevronDown" size={16} strokeWidth={2.2} />
         </button>
       </div>
     </div>

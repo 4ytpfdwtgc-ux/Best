@@ -73,7 +73,13 @@ export function BlockEditor({ note }: { note: Note }) {
       const blockId = host?.closest<HTMLElement>('[data-block-id]')?.dataset.blockId
       const at = host && blockId ? selectionRange(host) : null
       setRange((current) => {
-        if (!at || !blockId) return current === null ? current : null
+        /*
+         * Nothing selected in a block right now. That is usually because the
+         * keyboard has just been put away to make room for a panel, and the
+         * words are still the ones the next Bold is meant for -- so the last
+         * range is kept rather than dropped.
+         */
+        if (!at || !blockId) return current
         if (current && current.blockId === blockId && current.start === at.start && current.end === at.end) {
           return current
         }
@@ -115,13 +121,18 @@ export function BlockEditor({ note }: { note: Note }) {
   const [recordingId, setRecordingId] = useState<string | null>(null)
   /** The sketch being drawn on, if any. */
   const [sketchId, setSketchId] = useState<string | null>(null)
+  /** Rises on every focus, so an open panel gets out of the keyboard's way. */
+  const [focusedAt, setFocusedAt] = useState(0)
   /** Shown after Scan Text, which is a thing iOS does and the page cannot. */
   const [hint, setHint] = useState<string | null>(null)
   const pickerRef = useRef<HTMLInputElement>(null)
   const pickModeRef = useRef<'auto' | 'image' | 'file'>('auto')
   const barBlock = note.blocks.find((b) => b.id === barId) ?? null
 
-  useEffect(() => setBarId(null), [note.id])
+  useEffect(() => {
+    setBarId(null)
+    setRange(null)
+  }, [note.id])
 
   useEffect(() => {
     const onFocusOut = (e: FocusEvent) => {
@@ -771,6 +782,7 @@ export function BlockEditor({ note }: { note: Note }) {
                 onFocus={() => {
                   setActiveId(block.id)
                   setBarId(block.id)
+                  setFocusedAt((n) => n + 1)
                 }}
                 // Focus moving to another block sets its id straight after.
                 onBlur={() => setActiveId((current) => (current === block.id ? null : current))}
@@ -820,8 +832,10 @@ export function BlockEditor({ note }: { note: Note }) {
           marks={marks}
           onMark={applyMark}
           onStyle={(type) => {
+            // No refocus: styles are chosen from the panel that is standing in
+            // for the keyboard, and calling it back would shut the panel after
+            // every choice. Closing the panel is what returns to the writing.
             turnInto(barBlock, type)
-            focusBlock(barBlock.id, range?.end ?? 'end')
           }}
           onIndent={indentBy}
           onColor={(color) => patchBlock(barBlock.id, { color })}
@@ -829,6 +843,22 @@ export function BlockEditor({ note }: { note: Note }) {
           onFont={(font: NoteFont) => updateNote(note.id, { font })}
           onScale={(fontScale) => updateNote(note.id, { fontScale })}
           onAttach={runAttach}
+          focusedAt={focusedAt}
+          onPause={() => (document.activeElement as HTMLElement | null)?.blur?.()}
+          onResume={() => {
+            // Whatever was selected when the panel took the keyboard's place
+            // is selected again, or closing it would quietly drop the words
+            // the next Bold was meant for.
+            if (range?.blockId === barBlock.id && range.start !== range.end) {
+              selectBlockRange(barBlock.id, range.start, range.end)
+            } else {
+              focusBlock(barBlock.id, range?.end ?? 'end')
+            }
+          }}
+          onDone={() => {
+            ;(document.activeElement as HTMLElement | null)?.blur?.()
+            setBarId(null)
+          }}
         />
       )}
 

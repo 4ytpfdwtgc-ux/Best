@@ -961,10 +961,25 @@
   background: var(--bg-window);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-pop);
+}
+/* The marks scroll when they run out of room; Done never does. */
+.fmt__scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
   overflow-x: auto;
   scrollbar-width: none;
 }
-.fmt__bar::-webkit-scrollbar { display: none; }
+.fmt__scroll::-webkit-scrollbar { display: none; }
+.fmt__done {
+  flex: none;
+  margin-left: 4px;
+  border-left: 1px solid var(--line);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding-left: 10px;
+}
 
 .fmt__btn {
   flex: none;
@@ -1002,6 +1017,33 @@
   max-height: min(52vh, 420px);
   overflow-y: auto;
 }
+/* Sticky, so the way out stays put while the panel is scrolled. */
+.fmt__head {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -12px -14px 0;
+  padding: 10px 14px 8px;
+  background: var(--bg-window);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.fmt__title { font-size: 13px; font-weight: 600; color: var(--text); }
+.fmt__close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.fmt__close:hover { color: var(--text); }
+.fmt__done { color: var(--accent); }
+
 .fmt__group { display: flex; flex-direction: column; gap: 6px; }
 .fmt__label {
   font-size: 11px;
