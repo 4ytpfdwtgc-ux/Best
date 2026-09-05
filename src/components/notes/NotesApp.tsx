@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
-import { noteTree } from '../../lib/notes'
+import { canDropPage, noteTree } from '../../lib/notes'
+import { MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, releaseOtherGestures } from '../../lib/gestures'
 import {
-  addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, noteTitle, setPrefs,
-  setSelectedFolder, setSelectedNote, trashNote, unarchiveNote, updateFolder,
+  addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, moveNoteToFolder,
+  noteTitle, reparentNote, setPrefs, setSelectedFolder, setSelectedNote, trashNote, unarchiveNote,
+  updateFolder,
 } from '../../state/actions'
 import { relativeStamp } from '../../lib/date'
 import { useIsPhone } from '../../lib/useMediaQuery'
@@ -47,6 +49,92 @@ export function NotesApp({
   const selected = state.notes.find((n) => n.id === state.selectedNoteId) ?? null
   const trashCount = state.notes.filter((n) => n.trashedAt).length
   const archiveCount = state.notes.filter((n) => n.archivedAt && !n.trashedAt).length
+
+  /*
+   * Dragging a page onto another nests it inside; onto a folder, or onto the
+   * list's own heading, moves it out to that folder's top level. There is no
+   * reordering between siblings: the list is sorted by whatever the sort
+   * control says, and a manual order underneath a sort nobody asked for would
+   * only ever disagree with it.
+   */
+  const [pageDrag, setPageDrag] = useState<{ id: string; over: string | null } | null>(null)
+  const pageDragRef = useRef<{ id: string; over: string | null } | null>(null)
+  const draggedRef = useRef(false)
+
+  function startPageDrag(e: React.PointerEvent, id: string) {
+    if (e.button !== 0 || state.selectedFolderId === 'trash' || searching) return
+    const startX = e.clientX
+    const startY = e.clientY
+    const touch = e.pointerType === 'touch'
+    let engaged = false
+    let holdTimer: number | undefined
+    draggedRef.current = false
+
+    const engage = () => {
+      engaged = true
+      draggedRef.current = true
+      /*
+       * The row is also a swipe row, and both handlers see this one pointer.
+       * Telling the swipe to let go is what stops a page dragged towards a
+       * folder on the left also being read as a swipe left — which deleted it.
+       */
+      releaseOtherGestures()
+      pageDragRef.current = { id, over: null }
+      setPageDrag(pageDragRef.current)
+    }
+
+    /*
+     * Picking a page up takes a hold, on a mouse as well as a finger. It is
+     * what separates moving a page from swiping it: move first and it is a
+     * swipe, hold first and it is a move.
+     */
+    holdTimer = window.setTimeout(engage, touch ? TOUCH_HOLD_MS : MOUSE_HOLD_MS)
+
+    const onMove = (ev: PointerEvent) => {
+      if (!engaged) {
+        // Moving before the hold completes belongs to the swipe, or the scroll.
+        const far =
+          Math.abs(ev.clientX - startX) > TOUCH_SLOP || Math.abs(ev.clientY - startY) > TOUCH_SLOP
+        if (far) cleanup()
+        return
+      }
+
+      const el = document
+        .elementsFromPoint(ev.clientX, ev.clientY)
+        .find((n): n is HTMLElement => n instanceof HTMLElement && n.dataset.drop !== undefined)
+      const over = el?.dataset.drop ?? null
+      const page = over?.startsWith('page:') ? over.slice(5) : undefined
+      // Only light up somewhere the page could actually go.
+      const allowed =
+        over === null ||
+        (over.startsWith('folder:') ? true : canDropPage(state.notes, id, page))
+      pageDragRef.current = { id, over: allowed ? over : null }
+      setPageDrag(pageDragRef.current)
+    }
+
+    const onUp = () => {
+      const current = pageDragRef.current
+      cleanup()
+      window.setTimeout(() => void (draggedRef.current = false), 0)
+      if (!current?.over) return
+      if (current.over.startsWith('folder:')) moveNoteToFolder(current.id, current.over.slice(7))
+      else if (current.over.startsWith('page:')) reparentNote(current.id, current.over.slice(5))
+      else if (current.over === 'root') reparentNote(current.id, undefined)
+    }
+
+    const cleanup = () => {
+      window.clearTimeout(holdTimer)
+      pageDragRef.current = null
+      setPageDrag(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', cleanup)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', cleanup)
+  }
 
   // Keep a valid selection as the filtered list changes. On a phone the editor
   // is a pushed screen, so nothing is auto-selected — that would skip the list.
@@ -125,7 +213,12 @@ export function NotesApp({
           <ul className="side-list">
             {state.folders.map((folder) => (
               <li key={folder.id}>
-                <div className={`side-item tint-${folder.tint}${state.selectedFolderId === folder.id ? ' is-on' : ''}`}>
+                <div
+                  className={`side-item tint-${folder.tint}${
+                    state.selectedFolderId === folder.id ? ' is-on' : ''
+                  }${pageDrag?.over === `folder:${folder.id}` ? ' is-droptarget' : ''}`}
+                  data-drop={`folder:${folder.id}`}
+                >
                   <span className="side-item__glyph side-item__glyph--plain" onClick={() => setSelectedFolder(folder.id)}>
                     <Icon name="folder" size={16} />
                   </span>
@@ -219,7 +312,13 @@ export function NotesApp({
           )}
         </header>
 
-        <div className="notes-list__head">{folderTitle}</div>
+        <div
+          className={`notes-list__head${pageDrag?.over === 'root' ? ' is-droptarget' : ''}`}
+          data-drop="root"
+        >
+          {folderTitle}
+          {pageDrag && <span className="notes-list__hint">Drop here to move it out</span>}
+        </div>
 
         <ul className="notes-list__items scroll">
           {notes.length === 0 && (
@@ -238,7 +337,18 @@ export function NotesApp({
                     : { label: 'Archive', icon: 'inbox', tint: 'blue', run: () => archiveNote(note.id) }
                 }
               >
-              <div className="note-row" style={{ paddingLeft: depth * 14 }}>
+              <div
+                className={`note-row${pageDrag?.id === note.id ? ' is-dragging' : ''}${
+                  pageDrag && pageDrag.over === `page:${note.id}` ? ' is-droptarget' : ''
+                }`}
+                style={{ paddingLeft: depth * 14 }}
+                data-drop={`page:${note.id}`}
+                onPointerDown={(e) => {
+                  // The twist and the add button are their own controls.
+                  if ((e.target as HTMLElement).closest('.note-row__twist, .note-row__add')) return
+                  startPageDrag(e, note.id)
+                }}
+              >
                 <button
                   type="button"
                   className={`note-row__twist${hasChildren ? '' : ' is-empty'}${
@@ -263,7 +373,10 @@ export function NotesApp({
                 <button
                   type="button"
                   className={`note-card${note.id === state.selectedNoteId ? ' is-on' : ''}`}
-                  onClick={() => setSelectedNote(note.id)}
+                  onClick={() => {
+                    if (draggedRef.current) return
+                    setSelectedNote(note.id)
+                  }}
                 >
                   <span className="note-card__title">
                     <span className="note-card__icon">

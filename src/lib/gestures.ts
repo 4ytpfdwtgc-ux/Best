@@ -41,6 +41,12 @@ export const TOUCH_SLOP = harder(8)
  */
 export const TOUCH_HOLD_MS = Math.round(350 / SENSITIVITY)
 
+/**
+ * The same for a mouse, which has no scrolling to compete with and so needs
+ * only enough of a pause to say "pick this up" rather than "swipe it".
+ */
+export const MOUSE_HOLD_MS = Math.round(180 / SENSITIVITY)
+
 /* ------------------------------------------------------------------ */
 /* Swipe animation                                                     */
 /* ------------------------------------------------------------------ */
@@ -53,3 +59,17 @@ export const SWIPE_EXIT_MS = 260
 export const SWIPE_COLLAPSE_MS = 200
 /** Deceleration curve; a row should arrive rather than stop dead. */
 export const SWIPE_EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
+
+/**
+ * Fired on window when one gesture takes over from another.
+ *
+ * A note row is both a swipe row and something that can be picked up and
+ * moved, and one pointer reaches both handlers. Rather than overload
+ * `pointercancel` — which every one of them listens for, including the sender
+ * — the winner says so explicitly and the others let go.
+ */
+export const RELEASE_GESTURES = 'cadence:release-gestures'
+
+export function releaseOtherGestures(): void {
+  window.dispatchEvent(new Event(RELEASE_GESTURES))
+}

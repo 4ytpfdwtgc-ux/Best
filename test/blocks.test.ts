@@ -7,7 +7,7 @@ import {
 import { decorateInline, toggleMark } from '../src/lib/inline.ts'
 import type { Block, Note, Reminder } from '../src/types.ts'
 import { noteToMarkdown, remindersToText, shareFilename } from '../src/lib/share.ts'
-import { noteTree } from '../src/lib/notes.ts'
+import { canDropPage, noteTree } from '../src/lib/notes.ts'
 import {
   DRAG_SLOP, SENSITIVITY, SWIPE_COMMIT, SWIPE_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP,
 } from '../src/lib/gestures.ts'
@@ -341,4 +341,34 @@ test('a gesture asks for roughly a third more than it used to', () => {
     const r = ratio(now, was)
     assert.ok(r > 1.35 && r < 1.55, `expected about 1.43x, got ${r.toFixed(2)}`)
   }
+})
+
+/* Dragging a page --------------------------------------------------- */
+
+test('a page can be dropped into another, or out to the top level', () => {
+  const notes = [page('a'), page('b'), page('b1', 'b')]
+  assert.equal(canDropPage(notes, 'a', 'b'), true)
+  assert.equal(canDropPage(notes, 'a', 'b1'), true)
+  assert.equal(canDropPage(notes, 'b1', undefined), true)
+})
+
+test('a page cannot be dropped inside itself or its own descendants', () => {
+  // Either would cut the branch off the tree and make it unreachable.
+  const notes = [page('a'), page('a1', 'a'), page('a1x', 'a1')]
+  assert.equal(canDropPage(notes, 'a', 'a'), false)
+  assert.equal(canDropPage(notes, 'a', 'a1'), false)
+  assert.equal(canDropPage(notes, 'a', 'a1x'), false)
+})
+
+test('dropping a page where it already is offers nothing', () => {
+  const notes = [page('a'), page('a1', 'a'), page('top')]
+  assert.equal(canDropPage(notes, 'a1', 'a'), false)
+  assert.equal(canDropPage(notes, 'top', undefined), false)
+})
+
+test('a page that is not there cannot be dragged, nor dropped on', () => {
+  const notes = [page('a')]
+  assert.equal(canDropPage(notes, 'ghost', undefined), false)
+  assert.equal(canDropPage(notes, 'a', 'ghost'), false)
+  assert.equal(canDropPage(notes, '', undefined), false)
 })

@@ -442,6 +442,33 @@
   .note-row__add { opacity: 1; }
 }
 
+/* Dragging a page ---------------------------------------------------- */
+
+/* The row claims the sideways gesture; the list keeps the vertical one. */
+.note-row { touch-action: pan-y; }
+.note-row.is-dragging { opacity: 0.4; }
+.note-row.is-droptarget {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+}
+/* Only lit while something is being dragged, so it is never in the way. */
+.notes-list__head.is-droptarget,
+.side-item.is-droptarget {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+}
+.notes-list__hint {
+  margin-left: 8px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+}
+
 /* Links written in the text ---------------------------------------- */
 
 .ln {

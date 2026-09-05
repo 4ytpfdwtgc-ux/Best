@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TintName } from '../../types'
 import {
-  SWIPE_COLLAPSE_MS, SWIPE_COMMIT, SWIPE_EXIT_MS, SWIPE_SLOP,
+  RELEASE_GESTURES, SWIPE_COLLAPSE_MS, SWIPE_COMMIT, SWIPE_EXIT_MS, SWIPE_SLOP,
 } from '../../lib/gestures'
 import { Icon } from './Icon'
 
@@ -114,15 +114,29 @@ export function SwipeRow({
       setOffset(0)
     }
 
+    /*
+     * A cancelled pointer, or another gesture claiming this one, is not a
+     * release: the row springs back rather than performing a destructive
+     * action nobody asked for.
+     */
+    const onCancel = () => {
+      cleanup()
+      setSettling(true)
+      offsetRef.current = 0
+      setOffset(0)
+    }
+
     const cleanup = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener(RELEASE_GESTURES, onCancel)
     }
 
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    window.addEventListener(RELEASE_GESTURES, onCancel)
   }
 
 

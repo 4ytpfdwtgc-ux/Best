@@ -586,11 +586,43 @@ export function addSubpage(parentId: ID): Note | undefined {
  */
 export function reparentNote(id: ID, parentId: ID | undefined) {
   if (id === parentId) return
-  const s = getState()
-  if (parentId && noteWithDescendants(s.notes, id).includes(parentId)) return
-  const parent = parentId ? s.notes.find((n) => n.id === parentId) : undefined
+  const state = getState()
+  if (parentId && noteWithDescendants(state.notes, id).includes(parentId)) return
+  const parent = parentId ? state.notes.find((n) => n.id === parentId) : undefined
   if (parentId && !parent) return
-  updateNote(id, { parentId, ...(parent ? { folderId: parent.folderId } : {}) })
+
+  // Whatever is nested under the page follows it into the parent's folder.
+  const family = new Set(noteWithDescendants(state.notes, id))
+  const folderId = parent?.folderId
+  const at = nowISO()
+  setState((s) => ({
+    notes: s.notes.map((n) => {
+      if (!family.has(n.id)) return n
+      const moved = folderId ? { ...n, folderId } : n
+      return n.id === id ? { ...moved, parentId, updatedAt: at } : moved
+    }),
+  }))
+}
+
+/**
+ * Move a page, and everything under it, into a folder.
+ *
+ * It lands at that folder's top level: a page dragged out of one folder into
+ * another is being taken out of wherever it sat, not put inside something it
+ * cannot see.
+ */
+export function moveNoteToFolder(id: ID, folderId: ID) {
+  const state = getState()
+  if (!state.folders.some((f) => f.id === folderId)) return
+  const family = new Set(noteWithDescendants(state.notes, id))
+  const at = nowISO()
+  setState((s) => ({
+    notes: s.notes.map((n) => {
+      if (!family.has(n.id)) return n
+      const moved = { ...n, folderId }
+      return n.id === id ? { ...moved, parentId: undefined, updatedAt: at } : moved
+    }),
+  }))
 }
 
 export function emptyTrash() {

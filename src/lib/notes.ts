@@ -96,3 +96,22 @@ export function noteAncestors(notes: Note[], note: Note): Note[] {
   }
   return chain
 }
+
+/**
+ * Whether a page can be dropped onto another.
+ *
+ * A page cannot go inside itself or inside anything already nested under it:
+ * that would cut the branch off the tree, and it would simply stop being
+ * reachable. `into` of undefined means the top level, which is always allowed.
+ */
+export function canDropPage(notes: Note[], dragId: ID, into: ID | undefined): boolean {
+  if (!dragId) return false
+  if (into === dragId) return false
+  const dragged = notes.find((n) => n.id === dragId)
+  if (!dragged) return false
+  // Dropping where it already is changes nothing, so it is not offered.
+  if ((dragged.parentId ?? undefined) === into) return false
+  if (!into) return true
+  if (!notes.some((n) => n.id === into)) return false
+  return !noteWithDescendants(notes, dragId).includes(into)
+}

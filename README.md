@@ -129,6 +129,10 @@ absolute ones would resolve to the domain root and break the installed app.
   expands on its own, including adding a subpage. A search shows its matches
   flat rather than opening branches to reveal them. The breadcrumb walks back
   up, and deleting or archiving a page carries whatever is nested under it.
+- **Drag a page** to move it: hold it, then drop it on another page to nest it
+  inside, on the list heading to lift it back out, or on a folder to move it
+  there. Whatever is nested under it goes too. A page cannot be dropped inside
+  its own descendant, and nothing lights up where a page cannot actually go.
 - **Links in the writing**: `[text](url)` becomes a link, and `[[Page name]]`
   links to another page — creating it if it does not exist yet, since writing
   the link is usually how a page comes to exist. Each page lists the pages that
@@ -277,6 +281,13 @@ engages; it is currently 0.7, so a swipe needs 11px to start and 103px to
 commit, a drag needs 6px, and a finger holds for half a second before it picks
 anything up. They used to be five magic numbers in five files, which meant
 "the app is too twitchy" had no single answer.
+
+A note row is both a swipe row and something that can be picked up, and one
+pointer reaches both handlers. Moving first is a swipe; holding first picks the
+page up, and the winner fires `releaseOtherGestures()` so the loser springs
+back rather than acting. Overloading `pointercancel` for that does not work —
+every handler listens for it, including the one sending it, so it cancels
+itself.
 
 A swiped-away row leaves in two beats: it slides out under its own width and
 fades over 260ms while its height is held, then the gap it occupied closes
