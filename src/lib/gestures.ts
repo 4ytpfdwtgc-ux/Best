@@ -120,3 +120,55 @@ export function suppressSelection(): () => void {
 function preventSelect(e: Event) {
   e.preventDefault()
 }
+
+/* ------------------------------------------------------------------ */
+/* Keeping a gesture clear of the browser's own scrolling              */
+/* ------------------------------------------------------------------ */
+
+let holds = 0
+
+/**
+ * Stop the browser scrolling the page out from under a gesture.
+ *
+ * A row that can be dragged still has to let the list scroll through it, so it
+ * allows the vertical pan (`touch-action: pan-y`). The moment a finger moves
+ * the browser takes that pan for itself and sends `pointercancel` — which for a
+ * drag that has already engaged means the highlight vanishes mid-gesture and
+ * nothing is dropped.
+ *
+ * `touch-action` is read once when a finger lands, so changing it now would not
+ * help. Preventing the moves does: a drag engages from a finger held still, so
+ * the browser has not begun scrolling yet and the first move is still
+ * cancelable. Refusing it means the scroll never starts.
+ *
+ * Counted like the selection suppression above, and returns the release.
+ */
+export function holdGesture(): () => void {
+  holds++
+  if (holds === 1) document.addEventListener('touchmove', preventScroll, { passive: false, capture: true })
+
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    holds = Math.max(0, holds - 1)
+    if (holds === 0) document.removeEventListener('touchmove', preventScroll, { capture: true })
+  }
+}
+
+function preventScroll(e: Event) {
+  if (e.cancelable) e.preventDefault()
+}
+
+/**
+ * What a drag needs the moment it engages: no text selection underneath it,
+ * and no scrolling out from under it. Returns the release for both.
+ */
+export function beginDrag(): () => void {
+  const selection = suppressSelection()
+  const scroll = holdGesture()
+  return () => {
+    selection()
+    scroll()
+  }
+}

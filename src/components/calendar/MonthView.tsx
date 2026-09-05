@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { AppState, EventOccurrence } from '../../types'
 import { occurrencesOnDay } from '../../state/selectors'
 import { moveEvent } from '../../lib/reschedule'
-import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP, suppressSelection } from '../../lib/gestures'
+import { DRAG_SLOP, TOUCH_HOLD_MS, TOUCH_SLOP, beginDrag } from '../../lib/gestures'
 import { updateEvent } from '../../state/actions'
 import { diffDays } from '../../lib/date'
 import {
@@ -62,7 +62,7 @@ export function MonthView({
 
     const engage = () => {
       engaged = true
-      release = suppressSelection()
+      release = beginDrag()
       movedRef.current = true
       dragRef.current = { id: occ.event.id, from: occ.date }
     }

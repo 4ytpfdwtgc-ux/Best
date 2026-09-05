@@ -3,7 +3,7 @@ import { useApp } from '../../state/store'
 import { noteSnippet, visibleNotes } from '../../state/selectors'
 import { canDropPage, noteTree } from '../../lib/notes'
 import {
-  MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, releaseOtherGestures, suppressSelection,
+  MOUSE_HOLD_MS, TOUCH_HOLD_MS, TOUCH_SLOP, beginDrag, releaseOtherGestures,
 } from '../../lib/gestures'
 import {
   addFolder, addNote, addSubpage, archiveNote, deleteFolder, emptyTrash, moveNoteToFolder,
@@ -87,8 +87,9 @@ export function NotesApp({
     const engage = () => {
       engaged = true
       draggedRef.current = true
-      // The hold that picks a page up is also the one that starts selecting.
-      release = suppressSelection()
+      // The hold that picks a page up is also the one that starts selecting,
+      // and the move that follows is the one the list would scroll on.
+      release = beginDrag()
       /*
        * The row is also a swipe row, and both handlers see this one pointer.
        * Telling the swipe to let go is what stops a page dragged towards a
